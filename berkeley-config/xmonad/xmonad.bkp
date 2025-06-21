@@ -1,0 +1,177 @@
+import XMonad
+
+import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.ManageDocks
+import XMonad.Hooks.ManageHelpers
+import XMonad.Hooks.StatusBar
+import XMonad.Hooks.StatusBar.PP
+
+import XMonad.StackSet as W -- float purposes
+import XMonad.Actions.MouseResize
+
+
+import XMonad.Util.EZConfig
+import XMonad.Util.Loggers
+-- import XMonad.Util.Ungrab
+
+import XMonad.Layout.Magnifier
+import XMonad.Layout.ThreeColumns
+import XMonad.Layout.Spacing
+import XMonad.Util.SpawnOnce
+import XMonad.Actions.SpawnOn
+
+import XMonad.Hooks.EwmhDesktops
+
+-- run or raise
+import XMonad.Actions.WindowGo (raiseMaybe, runOrRaise)
+import XMonad.ManageHook (className)
+import XMonad.StackSet (RationalRect(..))
+--
+
+import XMonad.Layout.Decoration
+import XMonad.Layout.Simplest
+import XMonad.Layout.SimplestFloat
+import XMonad.Layout.Spacing
+import XMonad.Actions.PerWindowKeys 
+import XMonad.Actions.FindEmptyWorkspace
+import XMonad.Layout.Grid
+import XMonad.Layout.PerScreen (ifWider)
+import XMonad.StackSet
+import XMonad.Layout
+import XMonad.Layout.Reflect
+import XMonad.Layout.WindowArranger
+-- Window Rearragement
+import Data.List (find)
+import XMonad.Actions.EasyMotion (selectWindow)
+import XMonad.Actions.FocusNth (swapNth)
+import qualified XMonad.StackSet as W
+
+
+
+main :: IO ()
+main = xmonad
+     . ewmhFullscreen
+     . ewmh
+     . withEasySB (statusBarProp "xmobar" (pure myXmobarPP)) defToggleStrutsKey
+     $ myConfig
+
+
+myConfig = def
+    { modMask    = mod4Mask      -- Rebind Mod to the Super key
+    , layoutHook = windowArrange myLayout      -- Use custom layouts
+    , terminal   = "alacritty"
+    , focusedBorderColor = "#000000"
+    , manageHook = myManageHook  -- Match on certain windows
+    , startupHook = do
+          spawnOnce "bash /files/scripts/music.sh"
+          spawnOnce "bash /files/scripts/git.sh"
+          spawnOnce "bash /files/scripts/bg.sh"
+          spawnOnce "bash /files/scripts/forge.sh"
+          spawnOnce "bash /files/scripts/forgejo.sh"
+          spawnOnce "bash /files/scripts/flacss.sh"
+          spawnOnce "bash /home/berkeley/git/cleanall/clearner.sh"
+          -- other startup commands
+          spawnOnce "xrandr --dpi 4096"
+          spawnOnce "xrandr --output HDMI-A-0 --mode 1920x1080 --rate 60.00"
+	  spawnOnce "xrdb /home/berkeley/.Xresources"
+	  spawnOnce "picom -b"
+          spawnOnce "tor"
+          spawnOnce "feh --bg-fill /virt/pv/xxx.png"
+          spawnOnce "qutebrowser"
+          spawnOn "2" "alacritty"
+          spawnOn "3" "icecat"
+          spawnOn "4" "steam"
+          spawnOn "9" "pavucontrol"
+          spawnOnce "polybar top-monitor-1"
+	  spawnOnce "fcitx5 -d -r"
+    }
+    
+  `additionalKeysP`
+    [ ("M-d", spawn "rofi -show run")
+    , ("M-0", runOrRaise "alacritty" (className =? "alacritty")) 
+--    , ("M-C-s", runOrRaise "flameshot" (className =? "flameshot"))
+    , ("M-i", runOrRaise "qutebrowser" (className =? "Chromium-browser"))
+    , ("M-e", runOrRaise "icecat" (className =? "GNU IceCat"))
+    , ("M-p", runOrRaise "openshot-qt" (className =? "openshot"))
+    , ("M-o", runOrRaise "obs" (className =? "obs"))
+    , ("M-t", withFocused $ windows . W.sink)  -- Toggle float for the focused window
+    , ("M-x", runOrRaise "torbrowser" (className =? "Tor Browser"))
+    , ("M-S-q", return ())  -- Unbind Mod + Shift + Q, to avoid quiting the wm.
+    , ("M-q", kill)  -- Change the keybinding for closing windows to Mod + Q
+    , ("M-m", spawn "alacritty -e sh -c 'cd  /files/music/  && cmus'")
+    , ("M-S-r", spawn "~/.local/bin/run_anki.sh")
+    , ("M-b", spawn "alacritty -e sh -c 'cd /home/berkeley/git/cleanall/clearner.sh'")
+    , ("M-a", runOrRaise "torbrowser" (className =? "TorBrowser"))
+    , ("M-l", sendToEmptyWorkspace)  -- View an empty workspace
+    , ("M-f", viewEmptyWorkspace)  -- View an empty workspace
+    , ("M-z", spawn "flameshot gui")
+    , ("M-w", spawn "~/.local/bin/copy_image.sh")
+    , ("M-v", easySwap)
+    , ("M-k", spawn "bash /files/scripts/tmp.sh") 
+    , ("M-ç", spawn "bash /files/scripts/mullvad.sh") 
+    ]
+
+easySwap :: X ()
+easySwap = do
+  win      <- selectWindow def
+  stack    <- gets $ W.index . windowset
+  let match = find ((win ==) . Just . fst) $ zip stack [0 ..]
+  whenJust match $ swapNth . snd
+
+
+
+
+myManageHook :: ManageHook
+myManageHook = composeAll
+    [ className =? "Gimp" --> doFloat
+    , isDialog            --> doFloat
+    ]
+
+
+myTheme :: Theme
+myTheme = def
+    { decoHeight = 20
+
+    -- Add other theme properties as needed
+    }
+
+myLayout = mouseResize $ spacingRaw True (Border 10 10 10 10) True (Border 10 10 10 10) True $
+           tallLayout ||| Full
+    where
+        tallLayout = reflectHoriz $ Tall 2 (3/100) (1/2)
+
+toggleLayout :: X ()
+toggleLayout = do
+    currentLayout <- gets (W.layout . W.workspace . W.current . windowset)
+    case description currentLayout of
+        "Tall" -> sendMessage $ JumpToLayout "Mirror Tall"
+        _      -> sendMessage $ JumpToLayout "Tall"
+
+
+myXmobarPP :: PP
+myXmobarPP = def
+    { ppSep             = cyan " • "
+    , ppTitleSanitize   = xmobarStrip
+    , ppCurrent         = wrap " " "" . xmobarBorder "Top" "#8be9fd" 2
+    , ppHidden          = white . wrap " " ""
+    , ppHiddenNoWindows = lowWhite . wrap " " ""
+    , ppUrgent          = red . wrap (yellow "!") (yellow "!")
+    , ppOrder           = \[ws, l, _, wins] -> [ws, l, wins]
+    , ppExtras          = [logTitles formatFocused formatUnfocused]
+    }
+  where
+    formatFocused   = wrap (white    "[") (white    "]") . cyan . ppWindow
+    formatUnfocused = wrap (lowWhite "[") (lowWhite "]") . vividGreen . ppWindow
+
+    -- | Windows should have *some* title, which should not exceed a
+    -- sane length.
+    ppWindow :: String -> String
+    ppWindow = xmobarRaw . (\w -> if null w then "untitled" else w) . shorten 30
+
+    cyan, vividGreen, lowWhite, red, white, yellow :: String -> String
+    cyan      = xmobarColor "#8be9fd" ""
+    vividGreen = xmobarColor "#50fa7b" ""
+    white     = xmobarColor "#f8f8f2" ""
+    yellow    = xmobarColor "#f1fa8c" ""
+    red       = xmobarColor "#ff5555" ""
+    lowWhite  = xmobarColor "#bbbbbb" ""

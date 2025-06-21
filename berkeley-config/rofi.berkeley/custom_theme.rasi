@@ -1,0 +1,39 @@
+configuration {
+    // General settings
+    padding: 10px;
+    border: 2px solid #4CAF50; // Green border
+    corner-radius: 5px; // Rounded corners
+}
+
+* {
+    // Default colors
+    background: #282c34; // Dark background
+    foreground: #ffffff; // White text
+    selected-background: #4CAF50; // Green selected background
+    selected-foreground: #ffffff; // White text on selected item
+    border: 1px solid #4CAF50; // Border color
+}
+
+window {
+    width: 80%; // Width of the window
+    height: 50%; // Height of the window
+}
+
+listview {
+    lines: 10; // Number of visible lines
+    fixed-height: 0; // Allow dynamic height
+}
+
+element {
+    padding: 5px; // Padding for each element
+}
+
+element selected {
+    background: #4CAF50; // Background for selected items
+    foreground: #ffffff; // Text color for selected items
+}
+
+element urgent {
+    background: #ff0000; // Red background for urgent items
+    foreground: #ffffff; // White text for urgent items
+}

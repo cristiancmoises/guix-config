@@ -1,0 +1,54 @@
+[colors]
+# Increase intensity of colors
+[colors.primary]
+background = "#000000"   # True black background
+foreground = "#f8f8f2"    # Light white for foreground text
+
+[colors.normal]
+black =   "0x000000"   # True black
+red =     "0xFF5555"   # Intense red
+green =   "0x50FA7B"   # Intense green
+yellow =  "0xF1FA8C"   # Intense yellow
+blue =    "0x8BE9FD"   # Intense cyan/blue
+magenta = "0xFF79C6"   # Intense magenta
+cyan =    "0x8BE9FD"   # Intense cyan
+white =   "0xF8F8F2"   # White
+
+[colors.bright]
+black =   "0x555555"   # Dark grey
+red =     "0xFF5555"   # Bright red
+green =   "0x50FA7B"   # Bright green
+yellow =  "0xF1FA8C"   # Bright yellow
+blue =    "0x8BE9FD"   # Bright blue
+magenta = "0xFF79C6"   # Bright magenta
+cyan =    "0x8BE9FD"   # Bright cyan
+white =   "0xFFFFFF"   # Bright white
+
+[font]
+size = 18.0
+
+[font.normal]
+family = "Iosevka"
+style = "Regular"
+
+[window]
+decorations = "Full"
+opacity = 10  # Adjusted opacity for a slight translucent effect (optional)
+
+[env]
+  TERM = "xterm-256color"
+
+[scrolling]
+  history    = 10000
+  multiplier = 4
+
+[selection]
+  save_to_clipboard = true
+  semantic_escape_chars = ",│`|:\"' ()[]{}<>"
+
+[general]
+  live_config_reload = true
+
+[terminal]
+  # Define shell program
+  shell = "/home/berkeley/.guix-profile/bin/fish"
