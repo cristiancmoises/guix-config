@@ -1,0 +1,9 @@
+{
+  "openai_key": "sk-TRYHACKME",
+  "openai_max_tokens": 1000,
+  "openai_model": "gpt-4.1-nano",
+  "openai_proxy": "",
+  "openai_temperature": 0.2,
+  "user_default_prompt_mode": "exec",
+  "user_preferences": ""
+}

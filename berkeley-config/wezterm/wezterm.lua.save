@@ -1,0 +1,28 @@
+local wezterm = require 'wezterm'
+local config = wezterm.config_builder()
+
+-- GPU acceleration
+config.front_end = 'WebGpu'
+config.webgpu_power_preference = 'HighPerformance'
+
+-- Font configuration config.font = wezterm.font('Iosevka Nerd Font', { weight = 'Regular', stretch = 'Normal', style = 
+'Normal' }) config.font_size = 24.0 config.line_height = 1.0
+-- Background opacity
+config.window_background_opacity = 0.85
+config.macos_window_background_blur = 20 -- Optional: adds blur on macOS, may work on some Linux compositors
+
+-- Additional power settings
+config.color_scheme = 'Catppuccin Mocha' -- Modern, high-contrast theme
+config.window_decorations = 'RESIZE' -- Minimalist, no title bar
+config.window_padding = { left = 5, right = 5, top = 5, bottom = 5 }
+config.enable_tab_bar = false -- Clean look
+config.default_cursor_style = 'BlinkingBar'
+config.cursor_blink_rate = 500
+config.scrollback_lines = 100000 -- Large scrollback for power users
+config.max_fps = 165 -- Smooth rendering on high-refresh-rate displays
+config.automatically_reload_config = true -- Instant config updates
+
+-- Ensure Iosevka is available
+config.font_dirs = { '/home/' .. os.getenv('USER') .. '/.local/share/fonts' } -- Adjust path if needed
+
+return config
