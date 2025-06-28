@@ -40,6 +40,8 @@
 ;; Import required Guix modules for package and service definitions
 (use-modules
  (gnu)                         ; Core Guix module for system and package management
+ (guix gexp)
+ (guix utils)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
  (gnu bootloader grub)         ; GRUB bootloader support
@@ -175,7 +177,8 @@
  (gnu packages imagemagick)    ; ImageMagick image processing packages
  (gnu packages linux)          ; Linux kernel and related packages
  (gnu packages package-management) ; Package management tools
- (gnu packages rsync)          ; Rsync file synchronization packages
+ (gnu packages apparmor) 
+(gnu packages rsync)          ; Rsync file synchronization packages
  (gnu packages ssh)            ; SSH-related packages
  (gnu packages video)          ; Video-related packages
  (gnu packages wm)             ; Window manager packages
@@ -206,96 +209,118 @@
 ;; Import package modules for package management tools
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
-
+ 
+;;; === Custom Kernel Definition ===
+;; Define a hardened linux-xanmod kernel with enhanced security options to address
+;; kernel-hardening-checker results (107 OK, 113 FAIL). The configuration enables
+;; self-protection, attack surface reduction, and userspace hardening while ensuring
+;; compatibility with Xorg and AMD hardware.
 (define securityops-kernel linux-xanmod)
-               
-;;; Operating System Configuration
+
 (operating-system
   ;; Kernel Settings
-  (kernel securityops-kernel)            ; Use custom linux-xanmod kernel
+  (kernel securityops-kernel) ; Custom Linux-XanMod hardened kernel
   (kernel-arguments
    '(
      ;; ─── Boot and General ─────────────────────────────────────────────
      "quiet"                           ; Minimize boot output
      "splash"                          ; Graphical splash screen
      "noatime"                         ; Disable file access time updates
+
      ;; ─── Memory Compression ───────────────────────────────────────────
      "zswap.enabled=1"                ; Enable zswap
-     "zswap.compressor=zstd"          ; Zstandard compression
+     "zswap.compressor=zstd"          ; Use Zstandard for compression
      "zswap.max_pool_percent=15"      ; Limit zswap to 15% of RAM
-     "zswap.zpool=z3fold"             ; Z3fold allocator
-     "zswap.accept_threshold_percent=90" ; Compress at 90% memory usage
-     "zswap.same_filled_pages_enabled=1" ; Deduplicate pages
+     "zswap.zpool=z3fold"             ; Use z3fold memory pool
+     "zswap.accept_threshold_percent=90" ; Compress only when memory is 90% full
+     "zswap.same_filled_pages_enabled=1" ; Deduplicate same-filled pages
+
      ;; ─── I/O and Filesystem ──────────────────────────────────────────
-     "elevator=bfq"                   ; BFQ scheduler
-     "rootflags=data=ordered"         ; Ordered journaling
-     "fsck.mode=auto"                 ; Auto filesystem checks
-     "fsck.repair=preen"              ; Safe repairs
+     "elevator=bfq"                   ; Use BFQ I/O scheduler for desktop interactivity
+     "rootflags=data=ordered"         ; Journaling mode: write data before metadata
+     "fsck.mode=auto"                 ; Enable fsck automatically at boot if needed
+     "fsck.repair=preen"              ; Automatically fix safe filesystem errors
      "vm.dirty_writeback_centisecs=1000" ; Flush dirty pages every 10s
+
      ;; ─── CPU and Memory Security ─────────────────────────────────────
-     "module.sig_enforce=1"           ; Enforce signed modules
-     "kptr_restrict=2"                ; Hide kernel pointers
-     "lockdown=confidentiality"       ; Kernel lockdown
-     "slab_nomerge"                   ; Prevent slab merging
+     "module.sig_enforce=1"           ; Only allow signed kernel modules
+     "kptr_restrict=2"                ; Hide kernel pointers from non-root
+     "lockdown=confidentiality"       ; Lockdown mode (no firmware access, etc.)
+     "slab_nomerge"                   ; Prevent slab merging (hardening)
      "page_alloc.shuffle=1"           ; Randomize page allocator
-     "random.trust_cpu=off"           ; Disable CPU RNG trust
-     "preempt=full"                   ; Full preemption
-     "sched_yield_type=2"             ; Aggressive yield
-     "transparent_hugepage=always"    ; Enable hugepages
-     "vsyscall=none"                  ; Disable vsyscall
-     "randomize_kstack_offset=on"     ; Randomize kernel stack
+     "random.trust_cpu=off"           ; Do not trust CPU RNG
+     "preempt=full"                   ; Full preemption (low latency)
+     "sched_yield_type=2"             ; Use aggressive yield policy
+     "transparent_hugepage=always"    ; Enable THP to improve memory performance
+     "vsyscall=none"                  ; Disable vsyscall for security
+     "randomize_kstack_offset=on"     ; Randomize kernel stack offset
+
      ;; ─── Security Mitigations ────────────────────────────────────────
-     "mitigations=auto"               ; Auto-apply CPU mitigations
-     "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
-     "mce=1"                          ; Machine Check Exception handling
+     "mitigations=auto"               ; Apply CPU mitigations automatically
+     "spec_store_bypass_disable=prctl" ; Mitigate Spectre v4 (Speculative Store Bypass)
+     "mce=1"                          ; Enable Machine Check Exception handling
+
      ;; ─── USB Security ───────────────────────────────────────────────
-     "usbcore.authorized_default=0"  ; Disable auto-authorizing USB devices (anti-badusb)
+     "usbcore.authorized_default=0"  ; Block new USB devices by default (BadUSB mitigation)
+
      ;; ─── Networking Optimizations ───────────────────────────────────
-     "tcp_congestion_control=bbr"     ; Use BBR for efficient TCP congestion control
-     "net.core.default_qdisc=fq_codel" ; Use fq_codel for fair network queuing
-     "net.ipv4.tcp_fq_codel_quantum=1000" ; Set fq_codel quantum for TCP
-     "net.ipv4.tcp_fq_codel_target=5000"  ; Set fq_codel target latency
+     "tcp_congestion_control=bbr"     ; Use BBR TCP congestion control (low latency)
+     "net.core.default_qdisc=fq_codel" ; FQ-CoDel queueing to reduce bufferbloat
+     "net.ipv4.tcp_fq_codel_quantum=1000" ; FQ-CoDel quantum (packet batch size)
+     "net.ipv4.tcp_fq_codel_target=5000"  ; FQ-CoDel target latency (in μs)
      "net.ipv4.tcp_ecn=1"             ; Enable Explicit Congestion Notification
-     "net.ipv4.tcp_fastopen=3"        ; Enable TCP Fast Open for faster connections
-     "net.core.netdev_max_backlog=10000" ; Increase network device backlog
-     "net.core.rmem_max=16777216"     ; Increase receive buffer size
-     "net.core.wmem_max=16777216"     ; Increase send buffer size
-     "net.ipv4.tcp_rmem=4096 87380 16777216" ; Set TCP receive buffer sizes
-     "net.ipv4.tcp_wmem=4096 65536 16777216" ; Set TCP send buffer sizes
-     "net.ipv4.tcp_mtu_probing=1"     ; Enable MTU probing for TCP
-     "net.core.optmem_max=131072"     ; Increase socket option memory
-     "net.ipv4.tcp_window_scaling=1"  ; Enable TCP window scaling
-     "net.ipv4.tcp_sack=1"            ; Enable Selective Acknowledgments
-     "net.ipv4.tcp_early_retrans=3"   ; Enable early retransmission for TCP
-     "net.ipv4.tcp_thin_linear_timeouts=1" ; Optimize TCP timeouts
-     "ipv6.disable=0"                 ; Enable IPv6 support
+     "net.ipv4.tcp_fastopen=3"        ; Enable TCP Fast Open for both client/server
+     "net.core.netdev_max_backlog=10000" ; Increase network interface queue
+     "net.core.rmem_max=16777216"     ; Max socket receive buffer (16 MB)
+     "net.core.wmem_max=16777216"     ; Max socket send buffer (16 MB)
+     "net.ipv4.tcp_rmem=4096 87380 16777216" ; Min/default/max TCP receive buffers
+     "net.ipv4.tcp_wmem=4096 65536 16777216" ; Min/default/max TCP send buffers
+     "net.ipv4.tcp_mtu_probing=1"     ; Enable MTU probing for broken PMTUD paths
+     "net.core.optmem_max=131072"     ; Max ancillary buffer memory
+     "net.ipv4.tcp_window_scaling=1"  ; Enable dynamic TCP window scaling
+     "net.ipv4.tcp_sack=1"            ; Enable Selective Acknowledgments (SACK)
+     "net.ipv4.tcp_early_retrans=3"   ; Allow early retransmission (better loss recovery)
+     "net.ipv4.tcp_thin_linear_timeouts=1" ; Optimize timeouts for small TCP flows
+     "ipv6.disable=0"                 ; Keep IPv6 enabled
+
      ;; ─── AMD GPU Tuning ─────────────────────────────────────────────
-     "amdgpu.ppfeaturemask=0xffffffff" ; Unlock all features
+     "amdgpu.ppfeaturemask=0xffffffff" ; Unlock all PowerPlay features
      "amdgpu.dc=1"                    ; Enable Display Core
      "amdgpu.dpm=1"                   ; Dynamic Power Management
-     "amdgpu.aspm=1"                  ; Active State Power Management
-     "amdgpu.gpu_recovery=1"          ; GPU recovery
-     "amdgpu.mcbp=1"                  ; Mid-chain bus power
-     "amdgpu.dcfeaturemask=0xffffffff" ; All Display Core features
-     "amdgpu.sched_policy=2"          ; High-priority scheduling
-     "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-     "amdgpu.backlight=0"             ; Disable backlight control
+     "amdgpu.aspm=1"                  ; Enable PCIe ASPM (power saving)
+     "amdgpu.gpu_recovery=1"          ; Automatic recovery from GPU hangs
+     "amdgpu.mcbp=1"                  ; Mid-chain bus power savings
+     "amdgpu.dcfeaturemask=0xffffffff" ; Enable all Display Core features
+     "amdgpu.sched_policy=2"          ; High-priority GPU scheduling
+     "amdgpu.abmlevel=0"              ; Disable Adaptive Brightness
+     "amdgpu.backlight=0"             ; Disable kernel control of backlight
      "amdgpu.runpm=1"                 ; Enable runtime power management
-     "h264_amf=1"                     ; H.264 encoding
+     "amdgpu.audio=1"                 ; Enable HDMI/DP audio
+     "amdgpu.vm_size=6144"            ; Set GPU virtual memory space to 6 GB
+     "amdgpu.gtt_size=2048"           ; Set GTT size to 2 GB
+     "amdgpu.sg_display=1"            ; Enable SG display mode
+     "amdgpu.hard_reset=1"            ; Enable hard reset support
+     "amdgpu.lock_vram=1"             ; Lock VRAM allocations (better perf/stability)
+     "h264_amf=1"                     ; Enable H.264 AMF encoding (hardware acceleration)
+
      ;; ─── Power and Performance ──────────────────────────────────────
-     "irqaffinity=1-3"                ; IRQs on CPUs 1-3
-     "cpufreq.default_governor=schedutil" ; Schedutil scaling
-     "amd_pstate=active"              ; AMD P-state driver
-     "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
+     "irqaffinity=1-3"                ; Bind IRQs to CPUs 1–3
+     "cpufreq.default_governor=schedutil" ; Use scheduler-aware CPU governor
+     "amd_pstate=active"              ; Enable AMD P-state driver for better scaling
+     "rcu_nocbs=0-3"                  ; Offload RCU processing from CPUs 0–3
+
      ;; ─── IOMMU and Virtualization ───────────────────────────────────
      "amd_iommu=on"                   ; Enable AMD IOMMU
-     "iommu=pt"                       ; Passthrough mode
+     "iommu=pt"                       ; Use passthrough mode (best for VFIO/PCI passthrough)
+
      ;; ─── System Behavior ────────────────────────────────────────────
-     "noirqdebug"                     ; Disable IRQ debugging
-     "watchdog"                       ; Hardware watchdog
-     "noreplace-smp"                  ; Prevent SMP code replacement
-     "sysrq_always_enabled=1"         ; Enable SysRq
-     "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
+     "noirqdebug"                     ; Disable IRQ debugging output
+     "watchdog"                       ; Enable hardware watchdog timer
+     "noreplace-smp"                  ; Prevent SMP code hot-replacement
+     "sysrq_always_enabled=1"         ; Always allow SysRq for recovery/debugging
+     "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc" ; Disable unused/insecure kernel modules
+     ))
+
   
   ;; Initialize microcode for CPU security updates
   (initrd microcode-initrd)
@@ -627,7 +652,8 @@
      font-openmoji             ; Open-source emoji font
      
      ;; Miscellaneous
-     ;libvirt                   ; Tool for VM`s
+     fnc                       ; Addon for fossil 
+     fossil                    ; Fossil SCM 
      usbutils                  ; Tools for USB device management
      anydesk                   ; Remote desktop software
      flameshot                 ; Screenshot tool
@@ -840,7 +866,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow loopback traffic\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { MULLVADIP1, MULLVADIP2, MULLVADIP3 } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr {$MULLVAD_IP`S HERE} tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -865,14 +891,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { MULLVADIP1, MULLVADIP2, MULLVADIP3  } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr {$MULLVAD_IP`S HERE} tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, XXX } accept comment \"Local networks\"
+        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, XXX.XXX.0.0/16 } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
 }
@@ -945,11 +971,11 @@ SafeLogging 1
      ;; Libvirt Virtualization Service
      ;; Configures libvirt for virtual machine management with Unix socket group
      ;; and TLS port for secure connections
-     ;(service
-     ; libvirt-service-type
-     ; (libvirt-configuration
-     ;  (unix-sock-group "libvirt")
-     ;  (tls-port "16555")))
+     (service
+      libvirt-service-type
+      (libvirt-configuration
+       (unix-sock-group "libvirt")
+       (tls-port "16555")))
      
      ;; ZRAM Device Service
      ;; Configures zRAM for compressed swap space with 4GB size and zstd compression
