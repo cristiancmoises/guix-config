@@ -1,0 +1,63 @@
+#!/bin/sh
+set -e
+
+# --- Cleaner: remove previous preview and old cache ---
+cleanup_preview() {
+    if [ -n "$FIFO_UEBERZUG" ] && [ -p "$FIFO_UEBERZUG" ]; then
+        printf '{"action":"remove","identifier":"PREVIEW"}\n' > "$FIFO_UEBERZUG"
+        sync
+    fi
+    CACHE_DIR="$HOME/.cache/lf"
+    find "$CACHE_DIR" -type f -mtime +1 -delete 2>/dev/null
+}
+
+if [ "$1" = "clear" ]; then
+    cleanup_preview
+    exit 0
+fi
+
+image() {
+    cleanup_preview
+    if [ -n "$DISPLAY" ]; then
+        sleep 0.03
+        printf '{"action": "add", "identifier": "PREVIEW", "x": "%s", "y": "%s", "width": "%s", "height": "%s", "scaler": "contain", "path": "%s"}\n' \
+            "$4" "$5" "$(($2-1))" "$(($3-1))" "$1" > "$FIFO_UEBERZUG"
+    else
+        chafa "$1" -s "$4x"
+    fi
+}
+
+batorcat() {
+    file="$1"
+    shift
+    if command -v bat >/dev/null 2>&1; then
+        bat --color=always --style=plain --pager=never \
+            --wrap=character --terminal-width=80 "$file" "$@" | head -n 120
+    else
+        fold -w 80 "$file" | head -n 120
+    fi
+}
+
+CACHE="$HOME/.cache/lf/thumbnail.$(stat --printf '%n\0%i\0%F\0%s\0%W\0%Y' -- "$(readlink -f "$1")" | sha256sum | awk '{print $1}')"
+
+case "$(printf "%s\n" "$(readlink -f "$1")" | awk '{print tolower($0)}')" in
+    *.jpg|*.jpeg|*.png|*.gif|*.bmp|*.webp|*.xpm|*.jfif)
+        image "$1" "$2" "$3" "$4" "$5"
+        ;;
+    *.svg)
+        [ ! -f "${CACHE}.jpg" ] && convert "$1" "${CACHE}.jpg"
+        image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
+        ;;
+    *.mp4|*.mkv|*.webm|*.avi|*.mov)
+        [ ! -f "${CACHE}.jpg" ] && ffmpegthumbnailer -i "$1" -o "${CACHE}.jpg" -s 0 -q 8
+        image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
+        ;;
+    *.pdf)
+        [ ! -f "${CACHE}.jpg" ] && pdftoppm -jpeg -f 1 -singlefile "$1" "$CACHE"
+        image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
+        ;;
+    *)
+        batorcat "$1"
+        ;;
+esac
+exit 0

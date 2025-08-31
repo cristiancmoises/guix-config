@@ -1,0 +1,20 @@
+# All cyan on black
+
+# Directories
+di 36
+# Symlinks
+ln 36
+# Executables
+ex 36
+# Regular files
+fi 36
+
+# Media extensions
+*.jpg 36
+*.jpeg 36
+*.png 36
+*.gif 36
+*.mp4 36
+*.mkv 36
+*.mp3 36
+*.flac 36
