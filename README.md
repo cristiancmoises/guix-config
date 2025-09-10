@@ -29,7 +29,7 @@ With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [
 This GNU Guix configuration delivers a privacy-first, high-performance system optimized for an AMD Ryzen 3 2200G and Radeon RX 5600/5700 Series GPU. Powered by the securityops kernel, it includes AMD-specific tuning, 4GB zswap with zstd compression, and BBR networking for efficiency. Xmonad, paired with Rofi and Xmobar, provides a lightweight tiling desktop. Mullvad VPN and Tor ensure secure, anonymous networking, enforced by a strict NFTables firewall. Japanese input via Fcitx5 with Anthy and extensive fonts (Iosevka, Noto) enhance usability. The system supports gaming (Steam, Proton), torrenting (qBittorrent), multimedia (MPV, VLC), and development (GCC, Rust, Emacs). Docker and QEMU enable containerization and virtualization, though Libvirt is temporarily disabled due to a derivation error. Custom channels ([small-guix](https://codeberg.org/fishinthecalculator/small-guix.git), [ajattix](https://git.ajattix.org/hashirama/ajattix.git), [radix](https://codeberg.org/anemofilia/radix.git)) add flexibility, with detailed comments ensuring maintainability.
 
 - [Key Features](#key-features) - Privacy, security, performance, and more
-- [Security Ops Kernel](#-securityops-kernel--hardened-linux-kernel-for-self-protection) - Hardened Linux Kernel for Self-Protection
+- [Security Ops Kernel](#securityops-kernel) - Hardened Linux Kernel for Self-Protection
 - [Kernel Arguments](#kernel-arguments) - Installation instructions
 - [Package Highlights](#package-highlights) - Key software packages
 - [Services](#services) - Services
@@ -125,7 +125,7 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
   <img src="https://github.com/cristiancmoises/brutefox/assets/86272521/15afb340-af3f-4c3b-b029-d80ab0da59a0" width="350" height="220" alt="BrutefoX"/>
 </a>
 
-# 🛡️ SecurityOps Kernel — Hardened Linux Kernel for Self-Protection
+# SecurityOps Kernel
 
 **SecurityOps** is a custom Linux kernel built for **maximum resilience** on modern AMD hardware.  
 It integrates **XanMod optimizations**, **Clear Linux performance patches**, and **KSPP (Kernel Self Protection Project) hardening** into one consistent baseline.  
