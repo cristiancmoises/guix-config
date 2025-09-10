@@ -2,8 +2,8 @@
 ;; Guix System Configuration for Host "securityops"
 ;;
 ;; This configuration defines a secure, privacy-focused Guix system tailored for a machine
-;; with AMD Ryzen 2200G and Radeon RX 5600/5700 series GPU. It uses a custom linux-xanmod
-;; kernel optimized for performance and security, with a strict NFTables firewall to route
+;; with AMD Ryzen 2200G and Radeon RX 5600/5700 series GPU. It uses a custom linux
+;; kernel optimized for performance and security (SecurityOps), with a strict NFTables firewall to route
 ;; all traffic through Mullvad VPN (WireGuard, wg0-mullvad) by default. Tor is configured
 ;; for occasional use via torando scripts, providing transparent proxying (SOCKS 9050,
 ;; TransPort 9040). The system supports web browsing (Zen Browser, Icecat, Tor Browser),
@@ -34,15 +34,18 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 02, 2025
+;; Last Updated: August 10, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
 (use-modules
  (gnu)                         ; Core Guix module for system and package management
+ (guix utils)
+ (guix build-system gnu)
  (guix ui)                     ; UI 
  (xlibre)
  (guix gexp)
+(guix build-system linux-module)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
  (gnu bootloader grub)         ; GRUB bootloader support
@@ -214,8 +217,17 @@
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
 
-(define securityops-kernel linux-xanmod)
-    
+(define-public securityops
+  (package
+    (inherit linux-6.16)
+    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
+    (version "n.n")       ; 
+    (arguments
+     (substitute-keyword-arguments (package-arguments linux-6.16)
+       ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
+       ;; Keep all default phases
+       ((#:phases phases) phases)))))
+
 ;; -------------------------------------------------------------------
 ;; XLibre Configuration for AMDGPU with native resolution 1366x768
 ;; Description: Optimized configuration for AMDGPU using XLibre with
@@ -333,7 +345,7 @@ EndSection"
 ;; Operating System Configuration
 (operating-system            
   ;; Kernel Settings
-  (kernel securityops-kernel)            ; Use custom linux-xanmod kernel
+(kernel securityops)
   (kernel-arguments
    '(
      ;; ─── Boot and General ─────────────────────────────────────────────
@@ -418,12 +430,12 @@ EndSection"
      "sysrq_always_enabled=1"         ; Enable SysRq
      "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
 
-  ;; Initialize microcode for CPU security updates
   (initrd microcode-initrd)
   
   ;; Include firmware for hardware support
   (firmware (list linux-firmware))
-  
+
+
   ;; Set system locale to Brazilian Portuguese
   (locale "pt_BR.UTF-8")
   
@@ -460,6 +472,8 @@ EndSection"
      xlibre-server
      xlibre-input-libinput 
      xlibre-video-amdgpu
+     amd-microcode
+     amdgpu-firmware
      xterm
      xdpyinfo
      libva-utils               ; Utils for encoding
@@ -989,7 +1003,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADVPN } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $MULLVADIP } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -1014,14 +1028,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADVPN } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $MULLVADIP } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, $MULLVAD } accept comment \"Local networks\"
+        ip daddr { $IPRANGE } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
