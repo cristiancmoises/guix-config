@@ -34,17 +34,49 @@
 ;;   - Replace placeholder paths (e.g., /files/scripts) with generic ones if sharing.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 02, 2025
+;; Last Updated: August 13, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for home environment, packages, and services
 (use-modules
  (gnu home)                         ; Core Guix home environment module
  (gnu home services)                ; Home service definitions
+ (gnu home services desktop)
+ (gnu home services sound)
  (gnu home services fontutils)
+ (gnu packages file-systems)
+ (gnu home services gnupg)     ; GnuPG home services
+ (gnu home services xdg)       ; XDG home services
+ (gnu home-services wm)        ; Window manager home services
+ (ajatt packages video)
  (gnu home services shells)         ; Shell configuration services
  (gnu home services xdg)            ; XDG MIME and desktop integration
+ (gnu packages python-xyz)
  (gnu packages)
+ (radix services admin)        ; Custom admin service definitions
+ (radix packages xdisorg)      ; Custom X11 display organization packages
+ (radix packages image-viewers) ; Custom image viewer packages
+(gnu packages vpn)
+(gnu packages image)
+(gnu packages vim)
+(gnu packages cran)
+ (gnu packages gnupg)
+ (gnu packages rust)
+(gnu packages compton)
+(gnu packages sqlite)
+ (gnu packages password-utils)
+ (gnu packages python-build)
+ (gnu packages unicode)
+ (gnu packages lxqt)
+ (gnu packages java)
+ (gnu packages xorg)
+  (gnu packages kde-pim)
+ (gnu packages networking)
+ (gnu packages golang)
+(gnu packages wm)
+ (gnu packages firmware)
+ (gnu packages version-control)
+ (gnu packages node)
  (gnu packages admin)               ; System administration tools
  (gnu packages audio)               ; Audio-related packages
  (gnu packages bash)                ; Bash shell
@@ -56,8 +88,10 @@
  (gnu packages emacs)               ; Emacs editor
  (gnu packages emacs-xyz)           ; Emacs plugins
  (gnu packages freedesktop)         ; Freedesktop.org standards
+ (gnu packages build-tools)
  (gnu packages gl)                  ; OpenGL-related packages
  (gnu packages gtk)
+ (gnu packages image-viewers)
  (gnu packages gstreamer)           ; GStreamer multimedia framework
  (gnu packages gnome)               ; GNOME desktop tools
  (gnu packages hardware)            ; Hardware-related packages
@@ -92,12 +126,17 @@
  (gnu packages cmake)               ; CMake package
  (gnu packages shellutils)          ; Shell utilities
  (gnu packages photo)               ; Photo packages
+ (gnu packages llvm)
+ (gnu packages haskell-apps)
+ (gnu packages pulseaudio)
  (gnu packages guile-xyz)           ; Guile additional packages
  (guix gexp)                        ; G-expressions for file handling
  (srfi srfi-26)                     ; SRFI-26 for partial application
  (nongnu packages game-client)      ; Non-GNU game clients
  (nongnu packages chrome)           ; Non-GNU Chrome browser
- (saayix packages binaries))        ; Custom binary packages
+ (saayix packages binaries)        ; Custom binary packages
+ (gnu services dbus)
+ (gnu home services sound))
 
 (define fontconfig
   '(fontconfig
@@ -119,70 +158,237 @@
  ;; List of packages installed in the user's home environment, grouped by
  ;; functionality for clarity. Includes development tools, multimedia, file
  ;; management, desktop utilities, and the Iosevka font.
- (packages
-  (append
-   (list
-    ;; Development Tools
-    guile-ares-rs             ; Guile bindings for Rust
-    emacs-arei                ; Emacs integration for Ares
-    emacs-eat                 ; Terminal emulator for Emacs
-    emacs-rainbow-delimiters  ; Highlight nested delimiters
-    emacs-nyxt                ; Nyxt browser integration for Emacs
-    emacs-olivetti            ; Centered text mode for Emacs
-    emacs-deadgrep            ; Fast grep for Emacs
-    emacs-rg                  ; Ripgrep integration for Emacs
-    emacs-dumb-jump           ; Jump to definitions in Emacs
-    emacs-slime               ; Lisp development for Emacs
-    emacs-dirvish             ; File manager for Emacs
-    emacs-nerd-icons          ; Icon support for Emacs
-    emacs-telega              ; Telegram client for Emacs
-    sbcl-coleslaw             ; Static site generator in Common Lisp
-    cl-clx                    ; X11 client library for Common Lisp
-    cl-css                    ; CSS generation in Common Lisp
-    pkg-config                ; Package configuration tool
-    ghc-cabal-doctest         ; Haskell doctest support
-    bash                      ; Bash shell
-    python                    ; Python programming language
-    cmake                     ; Build system
-    ;; Multimedia
-    ffmpeg                    ; Video/audio processing
-    mplayer                   ; Media player
-    obs                       ; Streaming and recording
-    imagemagick               ; Image manipulation
-    perl-image-exiftool       ; Metadata extraction
-    ;; File and Disk Management
-    lf                        ; Minimalist file manager
-    ranger                    ; Console file manager
-    p7zip                     ; 7-Zip archive tool
-    qpdfview                  ; PDF viewer
-    ;; Desktop Utilities
-    gnome-tweaks              ; GNOME customization tool
-    lxappearance              ; Theme manager
-    flatpak-xdg-utils         ; Flatpak desktop integration
-    starship                  ; Customizable shell prompt
-    neofetch                  ; System information display
-    pfetch                    ; Lightweight system info
-    lm-sensors                ; Hardware monitoring
-    ;; Security
-    openssl                   ; Cryptography toolkit
-    ;; Text Editors
-    nano                      ; Simple text editor
-    ;; Emulators
-    higan                     ; Multi-system emulator
-    ;; Accessibility
-    at-spi2-core              ; Accessibility framework
-    ;; Fonts
-    font-iosevka              ; Iosevka font for coding and UI
-    )
-   (specifications->packages
-    (list
-     "obs"))))
+;; -*- scheme -*-
+;; GNU Guix Home Configuration for User "berkeley"
+;; Contains user-specific packages: development tools, editors, multimedia, fonts, and utilities
+
+(packages
+ (append
+  ;; ===========================
+  ;; Development Tools
+  ;; ===========================
+  (list
+   bash                        ; Shell
+   cmake                       ; Build system
+   llvm-for-mesa               ; LLVM optimized for Mesa
+   meson                       ; Build system
+   strace                       ; System call tracer
+   edk2-tools                  ; UEFI dev tools
+   fzf                         ; Fuzzy finder
+   jq                          ; JSON processor
+   pkg-config                  ; Package config tool
+
+   ;; Programming Languages
+   ghc                          ; Haskell compiler
+   cabal-install               ; Haskell package manager
+   ghc-cabal-doctest           ; Haskell doctest support
+   go                           ; Go language
+   openjdk                      ; Java Development Kit
+   python                       ; Python
+   python-pip                   ; Python package manager
+   python-emoji                 ; Emoji support
+   rust                         ; Rust
+   node                         ; Node.js runtime
+   git                          ; Version control
+   git-lfs                     ; Git extension for large files
+   sbcl-coleslaw               ; Static site generator in Common Lisp
+   cl-clx                       ; X11 client library for Common Lisp
+   cl-css                       ; CSS generation in Common Lisp
+   guile-ares-rs               ; Guile bindings for Rust
+   )
+
+  ;; ===========================
+  ;; Multimedia / Audio / Video
+  ;; ===========================
+  (list
+   pipewire
+   wireplumber
+   pavucontrol
+   pulsemixer
+   ffmpeg                       ; Audio/video processing
+   gpac
+   vvdec-app
+   openshot
+   mplayer                       ; Media player
+   obs                           ; Streaming & recording
+   obs-pipewire-audio-capture
+   imagemagick                   ; Image manipulation
+   perl-image-exiftool           ; Metadata extraction
+   noisetorch
+   mpd                           ; Music Player Daemon
+   bluez                          ; Bluetooth protocol stack
+   bluez-alsa                    ; ALSA Bluetooth integration
+   blueman                        ; Bluetooth manager
+   alsa-lib
+   alsa-utils
+   pavucontrol-qt
+   vlc
+   )
+
+  ;; ===========================
+  ;; File and Disk Management
+  ;; ===========================
+  (list
+   lf                             ; Minimalist file manager
+   ranger                          ; Console file manager
+   p7zip                           ; Archive tool
+   qpdfview                         ; PDF viewer
+   exfat-utils
+   exfatprogs
+   fuse-exfat
+   ntfs-3g
+   parted
+   smartmontools
+   mergerfs
+   udevil
+   gnome-disk-utility
+   gparted
+   bcachefs-tools
+   dosfstools
+   usbutils
+   sqlite
+   procps
+   )
+
+  ;; ===========================
+  ;; Desktop Utilities / Window Management
+  ;; ===========================
+  (list
+   gnome-tweaks
+   lxappearance
+   flatpak-xdg-utils
+   starship
+   neofetch
+   pfetch
+   lm-sensors
+
+   ;; Bars, notifications, and window management
+   polybar
+   waybar
+   fnott
+   swww
+   wl-clipboard
+   wlrctl
+   wlsunset
+   compton
+   picom
+   brightnessctl
+   feh
+   rofi
+   xmonad
+   xmobar
+   xprop
+   xrandr
+   xset
+   xterm
+   xpra
+   xwininfo
+   xdpyinfo
+   )
+
+  ;; ===========================
+  ;; Security / Privacy (user-level)
+  ;; ===========================
+  (list
+   openssl
+   firejail
+   gnupg
+   hashcat
+   keepassxc
+   kleopatra
+   ansible
+   nftables
+   tor
+   tor-client
+   torsocks
+   openvpn
+   privoxy
+   nmap
+   tcpdump
+   wireshark
+   )
+
+  ;; ===========================
+  ;; Text Editors / IDEs
+  ;; ===========================
+  (list
+   nano
+   emacs
+   emacs-arei
+   emacs-eat
+   emacs-rainbow-delimiters
+   emacs-nyxt
+   emacs-olivetti
+   emacs-deadgrep
+   emacs-rg
+   emacs-dumb-jump
+   emacs-slime
+   emacs-dirvish
+   emacs-nerd-icons
+   emacs-telega
+   neovim
+   gedit
+   )
+
+  ;; ===========================
+  ;; Emulators / Misc
+  ;; ===========================
+  (list
+   higan
+   at-spi2-core                   ; Accessibility
+   )
+
+  ;; ===========================
+  ;; Fonts
+  ;; ===========================
+  (list
+   font-iosevka
+   font-iosevka-aile
+   font-iosevka-etoile
+   font-iosevka-slab
+   font-iosevka-term
+   font-iosevka-term-slab
+   font-fira-code
+   font-fira-mono
+   font-fira-sans
+   font-jetbrains-mono
+   font-dejavu
+   font-liberation
+   font-terminus
+   font-hack
+   font-anonymous-pro
+   font-adobe-source-code-pro
+   font-google-noto-emoji
+   font-openmoji
+   unicode-emoji
+   r-emojifont
+   emacs-emojify
+   emacs-company-emoji
+   )
+
+  ;; ===========================
+  ;; Optional / Extras moved from config.scm
+  ;; ===========================
+  (list
+   kitty
+   alacritty
+   flameshot
+   qimgv
+   geeqie
+   ueberzug++
+   )
+  ))
+
 
  ;; Services
  ;; Configures shell, MIME associations, fonts, and environment variables for a
  ;; seamless user experience.
  (services
-  (list
+  (list 
+     ;; D-Bus is required for PipeWire/Portals
+      (service home-dbus-service-type)
+      ;; PipeWire core service
+      (service home-pipewire-service-type)
    ;; Bash Service
    ;; Configures Bash as a fallback shell with aliases and environment variables
    (service home-bash-service-type
@@ -331,3 +537,4 @@
                      ("VISUAL" . "nsxiv")
                      ("NVM_DIR" . "/home/berkeley/.config/nvm")
                      ("DRI_PRIME" . "1"))))))
+

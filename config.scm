@@ -3,9 +3,9 @@
 ;;
 ;; This configuration defines a secure, privacy-focused Guix system tailored for a machine
 ;; with AMD Ryzen 2200G and Radeon RX 5600/5700 series GPU. It uses a custom linux
-;; kernel optimized for performance and security (SecurityOps), with a strict NFTables firewall to route
-;; all traffic through Mullvad VPN (WireGuard, wg0-mullvad) by default. Tor is configured
-;; for occasional use via torando scripts, providing transparent proxying (SOCKS 9050,
+;; kernel optimized for performance and security (SecurityOps kernel), 
+;; with a strict NFTables firewall to route  all traffic through Mullvad VPN by default.
+;; Tor is configured for occasional use providing transparent proxying (SOCKS 9050,
 ;; TransPort 9040). The system supports web browsing (Zen Browser, Icecat, Tor Browser),
 ;; Guix upgrades, torrenting (qBittorrent), Steam gaming, and SSH, with Xmonad as the
 ;; window manager, Rofi for launching applications, and Fish Shell with Starship for an
@@ -34,7 +34,7 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 10, 2025
+;; Last Updated: August 13, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
@@ -460,412 +460,172 @@ EndSection"
      (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")))
     %base-user-accounts))
   
-  ;; Installed Packages
-  ;; This section lists all packages installed on the system, grouped by functionality
-  ;; for clarity. Each package is essential for graphics, multimedia, development,
-  ;; system utilities, security, networking, or aesthetics.
-  (packages
-   (append
-    (list
-     ;; Graphics and Multimedia
-    ;xf86-video-amdgpu         ; AMD GPU driver for Xorg
-     xlibre-server
-     xlibre-input-libinput 
-     xlibre-video-amdgpu
-     amd-microcode
-     amdgpu-firmware
-     xterm
-     xdpyinfo
-     libva-utils               ; Utils for encoding
-     libass                    ; Subtitle rendering library
-     mesa                      ; OpenGL implementation for 3D rendering
-     mesa-headers              ; Headers for Mesa development
-     mesa-utils                ; Utilities for testing and debugging Mesa
-     llvm-for-mesa             ; LLVM compiler optimized for Mesa
-     vulkan-tools              ; Tools for Vulkan API development and debugging
-     vulkan-loader             ; Vulkan API runtime loader
-     libva                     ; Video Acceleration API for hardware video decoding
-     libva-utils               ; Utilities for testing VAAPI
-     gstreamer                 ; Multimedia framework for audio/video processing
-     gst-plugins-bad           ; Additional GStreamer plugins (less stable)
-     gst-plugins-good          ; High-quality GStreamer plugins
-     mpv                       ; Lightweight, customizable media player
-     vlc                       ; Versatile media player with broad codec support
-     obs                       ; Streaming and recording software
-     openshot                  ; Non-linear video editing software
-     gimp                      ; Advanced image editing and graphic design
-     imagemagick               ; Command-line image processing toolkit
-     photoflare                ; Lightweight image editor with intuitive interface
-     libbluray                 ; Blu-ray disc playback support
-     libaacs                   ; AACS decryption for Blu-ray playback
-     libbdplus                 ; BD+ decryption for Blu-ray playback
-     v4l-utils                 ; Video4Linux utilities for webcam and TV tuner support
-     mangohud                  ; Performance overlay for games and applications
-     
-     ;; Desktop and Window Management
-     polybar                   ; Customizable status bar for window managers
-     waybar                    ; Status bar for Wayland-based environments
-     fnott                     ; Lightweight notification daemon for Wayland
-     swww                      ; Wallpaper manager for Wayland
-     fuzzel-lowercase          ; Application launcher for Wayland (lowercase variant)
-     wl-clipboard              ; Clipboard management for Wayland
-     wlrctl                    ; Utility for controlling Wayland compositors
-     wlsunset                  ; Day/night gamma adjustment for Wayland
-     xdg-utils                 ; Desktop integration utilities
-     compton                   ; Lightweight X11 compositor
-     picom                     ; Modern X11 compositor with advanced effects
-     brightnessctl             ; Control display brightness
-     feh                       ; Lightweight image viewer and wallpaper setter
-     rofi                      ; Application launcher and window switcher
-     xmonad                    ; Tiling window manager written in Haskell
-     dmenu                     ; Dynamic menu for X11
-     xmobar                    ; Lightweight status bar for Xmonad
-     xset                      ; X11 display settings utility
-     lxrandr                   ; Monitor configuration for LXDE
-     xrandr                    ; X11 display resolution and rotation utility
-     xwininfo                  ; Window information utility for X11
-     xprop                     ; Property display for X11 windows
-     xpra                      ; Remote desktop and application forwarding
-     xkill                     ; Utility to kill X11 windows
-     setxkbmap                 ; Set X11 keyboard layout
-     xmodmap                   ; Modify X11 keymaps
-     figlet                    ; Terminal Enhancement
-     
-     ;; Browsers
-     icecat                    ; GNU version of Firefox with privacy enhancements
-     torbrowser                ; Tor-enabled browser for anonymous browsing
-     zen-browser-bin           ; Privacy-focused web browser
-     google-chrome-stable      ; Chromium-based web browser
-     
-     ;; File and Disk Management
-     gthumb                    ; Image viewer and organizer
-     mergerfs                  ; Union filesystem for combining multiple drives
-     parted                    ; Disk partitioning tool
-     ntfs-3g                   ; NTFS filesystem support
-     udevil                    ; Mount and unmount devices without root
-     smartmontools             ; Disk health monitoring
-     bcachefs-tools            ; Tools for Bcachefs filesystem
-     exfat-utils               ; Utilities for exFAT filesystems
-     exfatprogs                ; Modern exFAT filesystem tools
-     fuse-exfat                ; FUSE-based exFAT filesystem support
-     dosfstools                ; Tools for FAT filesystems
-     gnome-disk-utility        ; GUI disk management tool
-     gparted                   ; Graphical disk partitioning tool
-     
-     ;; Development Tools
-     gcc                       ; GNU Compiler Collection
-     gcc-toolchain             ; Complete GCC toolchain
-     linux-libre-headers       ; Linux kernel headers for development
-     git                       ; Version control system
-     git-lfs                   ; Git extension for large files
-     ghc                       ; Glasgow Haskell Compiler
-     ghc-cabal-syntax          ; Cabal syntax for Haskell package management
-     cabal-install             ; Haskell package manager
-     ghc-git-lfs               ; Haskell bindings for Git LFS
-     ghc-hackage-security      ; Security for Haskell package downloads
-     ghc-xmonad-contrib        ; Xmonad window manager extensions
-     guile-ncurses             ; Ncurses bindings for Guile
-     guile-semver              ; Semantic versioning for Guile
-     go                        ; Go programming language
-     openjdk                   ; Java Development Kit
-     python                    ; Python programming language
-     python-pip                ; Python package manager
-     python-emoji              ; Emoji support for Python
-     python-pdfminer-six       ; PDF text extraction library
-     rust                      ; Rust programming language
-     node                      ; Node.js JavaScript runtime
-     yarn
-     cmake                     ; Cross-platform build system
-     meson                     ; High-performance build system
-     binutils                  ; GNU binary utilities
-     strace                    ; System call tracer
-     edk2-tools                ; UEFI firmware development tools
-     fzf                       ; Command-line fuzzy finder
-     jq                        ; JSON processor
-     grep                      ; Pattern matching utility
-     sed                       ; Stream editor for text manipulation
-     coreutils                 ; GNU core utilities
-     
-     ;; Text Editors and IDEs
-     emacs                     ; Extensible text editor
-     emacs-emojify             ; Emoji support for Emacs
-     neovim                    ; Modern Vim fork with enhanced features
-     gedit                     ; GNOME text editor
-     
-     ;; System Monitoring and Utilities
-     htop                      ; Interactive process viewer
-     btop                      ; Modern system monitor
-     glances                   ; Cross-platform system monitoring
-     inxi                      ; System information tool
-     neofetch                  ; System information display
-     fastfetch                 ; Anoteher Fetch
-     pfetch                    ; Lightweight system info fetcher
-     sysbench                  ; System performance benchmark
-     dmidecode                 ; Hardware information tool
-     lm-sensors                ; Hardware monitoring sensors
-     radeontop                 ; AMD GPU monitoring
-     net-tools                 ; Basic networking tools
-     fping                     ; Ping multiple hosts
-     netdiscover               ; Network discovery tool
-     whois                     ; Domain and IP lookup tool
-     macchanger                ; MAC address spoofing utility
-     
-     ;; Security and Privacy
-     acct                      ; Audit
-     ansible                   ; Audit
-     audit                     ; Audit System
-     sysstat                   ; System stat
-     nftables                  ; Firewall
-     clamav                    ; Antivirus software
-     gnupg                     ; GNU Privacy Guard for encryption
-     libfido2                  ; FIDO2/U2F authentication library
-     firejail                  ; Security sandbox for applications
-     privoxy                   ; Privacy-enhancing proxy
-     openvpn                   ; VPN client for secure connections
-     tor                       ; Anonymity network client
-     tor-client                ; Tor network client
-     torsocks                  ; Socks proxy for Tor
-     nmap                      ; Network exploration and security auditing
-     wireshark                 ; Network protocol analyzer
-     tcpdump                   ; Packet analyzer
-     openssl                   ; Cryptography and SSL/TLS toolkit
-     keepassxc                 ; Password manager
-     kleopatra                 ; GPG key management tool
-     hashcat                   ; Password recovery tool
-     haunt                     ; Static site generator with privacy focus
-     
-     ;; Input Methods
-     ibus                      ; Intelligent Input Bus for input methods
-     fcitx5                    ; Input method framework
-     fcitx5-gtk                ; GTK integration for Fcitx5
-     fcitx5-qt                 ; Qt integration for Fcitx5
-     fcitx5-anthy              ; Japanese input method for Fcitx5
-     fcitx5-gtk4               ; GTK4 integration for Fcitx5
-     fcitx5-configtool         ; Configuration tool for Fcitx5
-     
-     ;; Communication
-     qtox                      ; Tox-based secure messaging
-     jami                      ; Secure peer-to-peer communication
-     telegram-desktop          ; Telegram messaging client
-     
-     ;; Virtualization and Containers
-     qemu                      ; Virtual machine emulator
-     virt-manager              ; GUI for managing virtual machines
-     docker                    ; Container platform
-     containerd                ; Container runtime
-     
-     ;; Audio
-     alsa-lib                  ; ALSA sound library
-     alsa-utils                ; ALSA audio utilities
-     pavucontrol               ; PulseAudio volume control
-     pavucontrol-qt            ; Qt-based PulseAudio volume control
-     mpd                       ; Music Player Daemon
-     noisetorch                ; Noise suppression for audio
-     bluez                     ; Bluetooth protocol stack
-     bluez-alsa                ; ALSA integration for Bluetooth
-     blueman                   ; Bluetooth manager
-     cmus                      ; Lightweight console music player
-     navidrome-bin             ; Music streaming server
+;; Minimal essential packages only
 
-     ;; PDF and Document Tools
-     poppler                   ; PDF rendering library
-     poppler-qt5               ; Qt5 bindings for Poppler
-     python-pdfminer-six       ; PDF text extraction
-     foliate                   ; Ebook reader
-     
-     ;; Fonts
-     font-dejavu               ; DejaVu font family for general use
-     font-adobe-source-code-pro ; Monospace font for coding
-     font-adobe-source-han-sans ; CJK font for Chinese, Japanese, Korean
-     font-adobe-source-sans-pro ; Sans-serif font for documents
-     font-adobe-source-serif-pro ; Serif font for documents
-     font-anonymous-pro        ; Monospace font for programming
-     font-anonymous-pro-minus  ; Variant of Anonymous Pro
-     font-awesome              ; Icon font for UI elements
-     font-cns11643             ; CJK font for traditional Chinese
-     font-cns11643-swjz        ; Simplified Chinese variant of CNS11643
-     font-comic-neue           ; Casual comic-style font
-     font-culmus               ; Hebrew fonts
-     font-dosis                ; Rounded sans-serif font
-     font-dseg                 ; Retro-style segmented display font
-     font-fantasque-sans       ; Monospace font with a quirky design
-     font-fira-code            ; Monospace font with ligatures for coding
-     font-fira-mono            ; Monospace font for programming
-     font-fira-sans            ; Sans-serif font for UI and documents
-     font-fontna-yasashisa-antique ; Japanese font with a soft aesthetic
-     font-google-noto-emoji    ; Font Emojis
-     font-google-material-design-icons ; Material Design icons
-     font-google-noto          ; Comprehensive font for multiple scripts
-     font-google-roboto        ; Modern sans-serif font
-     font-gnu-freefont         ; GNU FREE
-     font-hack                 ; Monospace font for coding
-     font-hermit               ; Monospace font with clean design
-     font-ibm-plex             ; Modern font family for UI and documents
-     font-inconsolata          ; Monospace font for programming
-     font-iosevka              ; Highly customizable monospace font
-     font-iosevka-aile         ; Iosevka variant with cursive style
-     font-iosevka-etoile       ; Iosevka variant with decorative style
-     font-iosevka-slab         ; Iosevka with slab serifs
-     font-iosevka-term         ; Iosevka optimized for terminals
-     font-iosevka-term-slab    ; Iosevka terminal font with slab serifs
-     font-ipa-mj-mincho        ; Japanese Mincho font
-     font-jetbrains-mono       ; Monospace font for developers
-     font-lato                 ; Sans-serif font for modern design
-     font-liberation           ; Open-source font family
-     font-linuxlibertine       ; Serif font for documents
-     font-lohit                ; Fonts for Indian scripts
-     font-meera-inimai         ; Tamil font
-     font-mononoki             ; Monospace font for coding
-     font-mplus-testflight     ; Japanese font family
-     font-public-sans          ; Clean sans-serif font
-     font-rachana              ; Malayalam font
-     font-sarasa-gothic        ; CJK font with gothic style
-     font-sil-andika           ; Font for literacy and education
-     font-sil-charis           ; Serif font for publishing
-     font-sil-gentium          ; High-quality serif font
-     font-tamzen               ; Monospace bitmap font
-     font-terminus             ; Monospace bitmap font
-     font-tex-gyre             ; Professional font family for documents
-     font-un                   ; Korean font
-     font-vazir                ; Persian font
-     font-wqy-microhei         ; CJK font for Chinese
-     font-wqy-zenhei           ; CJK font for Chinese
-     font-adobe100dpi          ; Adobe bitmap fonts (100 DPI)
-     font-adobe75dpi           ; Adobe bitmap fonts (75 DPI)
-     font-cronyx-cyrillic      ; Cyrillic bitmap fonts
-     font-dec-misc             ; Miscellaneous bitmap fonts
-     font-isas-misc            ; Miscellaneous bitmap fonts
-     font-micro-misc           ; Small bitmap fonts
-     font-misc-cyrillic        ; Cyrillic bitmap fonts
-     font-misc-ethiopic        ; Ethiopic bitmap fonts
-     font-misc-misc            ; Miscellaneous bitmap fonts
-     font-mutt-misc            ; Bitmap fonts for Mutt
-     font-schumacher-misc      ; Classic bitmap fonts
-     font-screen-cyrillic      ; Cyrillic fonts for terminal
-     font-sony-misc            ; Sony bitmap fonts
-     font-sun-misc             ; Sun bitmap fonts
-     font-util                 ; Font utilities
-     font-winitzki-cyrillic    ; Cyrillic bitmap fonts
-     font-xfree86-type1        ; Type1 fonts for X11
-     font-google-noto-emoji    ; Noto emoji font
-     font-openmoji             ; Open-source emoji font
-     
-     ;; Miscellaneous
-     fnc                       ; Addon for fossil 
-     fossil                    ; Fossil SCM 
-     usbutils                  ; Tools for USB device management
-     anydesk                   ; Remote desktop software
-     flameshot                 ; Screenshot tool
-     flatpak                   ; Application sandboxing and distribution
-     xfe                       ; Lightweight file manager
-     lf                        ; Minimalist file manager
-     unzip                     ; Archive extraction tool
-     p7zip                     ; 7-Zip archive tool
-     unrar                     ; RAR archive extractor
-     lz4                       ; Fast compression algorithm
-     zstd                      ; High-performance compression
-     coreutils                 ; GNU core utilities
-     grep                      ; Pattern matching utility
-     sed                       ; Stream editor
-     jq                        ; JSON processor
-     asciinema                 ; Terminal session recorder
-     xmessage                  ; X11 message display utility
-     xrdb                      ; X11 resource database utility
-     linux-firmware            ; Firmware for hardware support
-     nix                       ; Reproducible package manager
-     sqlite                    ; Lightweight SQL database
-     procps                    ; Process utilities
-     scrot                     ; Screenshot tool
-     maim                      ; Modern screenshot tool
-     dconf                     ; Configuration storage system
-     fdm                       ; Mail fetching and delivery tool
-     kid3                      ; Audio tag editor
-     qtsolutions               ; Qt utility libraries
-     kitty                     ; Fast, GPU-accelerated terminal emulator
-     alacritty                 ; GPU-accelerated terminal emulator
-     wipe                      ; Secure file deletion
-     fontconfig                ; Font configuration library
-     libxfont                  ; X11 font library
-     libxft                    ; X11 FreeType font library
-     libgccjit                 ; JIT compilation library for GCC
-     mcron                     ; Cron job scheduler
-     kcalc                     ; KDE calculator
-     bc                        ; Command-line calculator
-     graphviz                  ; Graph visualization tool
-     httrack                   ; Website mirroring tool
-     geekbench5                ; System benchmarking tool
-     vim-characterize          ; Vim plugin for character information
-     r-emojifont               ; Emoji font for R
-     unicode-emoji             ; Unicode emoji data
-     emacs-company-emoji       ; Emoji completion for Emacs
-     sbcl                      ; Steel Bank Common Lisp
-     clisp                     ; GNU Common Lisp
-     monero-gui                ; Monero cryptocurrency wallet
-     qbittorrent               ; BitTorrent client
-     ncurses                   ; Terminal interface library
-     tdlib                     ; Telegram library
-     virt-manager              ; GUI for managing virtual machines
-     containerd                ; Container runtime
-     guix                      ; Guix package manager
-     qimgv                     ; Lightweight image viewer
-     geeqie                    ; Image Viewer
-     ueberzug++                ; Image overlay for terminals
-     )
-    
-    ;; Base Packages
-    (list
-     (specification->package "xlibre-server")
-     (specification->package "xlibre-video-amdgpu")
-     (specification->package "xlibre-input-libinput")
-     (specification->package "xmonad")          ; Tiling window manager
-     (specification->package "slim")            ; Better than GDM
-     (specification->package "i3-wm")           ; Lightweight tiling window manager
-     (specification->package "i3status")        ; Status bar for i3-wm
-     (specification->package "dmenu")           ; Dynamic menu for X11
-     (specification->package "foliate")         ; Ebook reader
-     (specification->package "kitty")           ; Fast terminal emulator
-     (specification->package "mullvad-vpn-desktop") ; Mullvad VPN client
-     (specification->package "tor")             ; Tor anonymity network
-     (specification->package "docker")          ; Container platform
-     (specification->package "docker-compose")  ; Multi-container Docker management
-     (specification->package "emacs")           ; Extensible text editor
-     (specification->package "jami")            ; Secure peer-to-peer communication
-     (specification->package "steam")           ; Gaming platform
-     (specification->package "protonup-ng")     ; Proton compatibility tool for Steam
-     (specification->package "qemu")            ; Virtual machine emulator
-     (specification->package "alacritty")       ; GPU-accelerated terminal
-     (specification->package "xkill")           ; Utility to kill X11 windows
-     (specification->package "guile")           ; GNU Scheme implementation
-     (specification->package "ueberzug++")      ; Image overlay for terminals
-     (specification->package "fcitx5-gtk4")     ; GTK4 integration for Fcitx5
-     (specification->package "fcitx5-qt")       ; Qt integration for Fcitx5
-     (specification->package "fcitx5-gtk")      ; GTK integration for Fcitx5
-     (specification->package "torbrowser")      ; Tor-enabled browser
-     (specification->package "i2pd")            ; I2P anonymous network
-     (specification->package "unrar")           ; RAR archive extractor
-     (specification->package "nicotine+")       ; Soulseek file-sharing client
-     (specification->package "icecat")          ; GNU Firefox variant
-     (specification->package "gimp")            ; Image editor
-     (specification->package "tor-client")      ; Tor network client
-     (specification->package "make")            ; GNU Make build tool
-     (specification->package "element-desktop") ; Matrix messaging client
-     (specification->package "telegram-desktop") ; Telegram client
-     (specification->package "font-apple-color-emoji") ; Apple emoji font
-     (specification->package "zen-browser-bin") ; Privacy-focused browser
-     (specification->package "xmobar")          ; Status bar for Xmonad
-     (specification->package "xmodmap")         ; X11 keymap modifier
-     (specification->package "rofi")            ; Application launcher
-     (specification->package "bluez-alsa")      ; ALSA integration for Bluetooth
-     (specification->package "bluez")           ; Bluetooth protocol stack
-     (specification->package "fuse")            ; Filesystem in Userspace
-     (specification->package "blueman")        ; Bluetooth manager
-     (specification->package "cmus")            ; Console music player
-     ;(specification->package  "navidrome-bin")  ; Music streaming server
-     (specification->package "nftables")
-     (specification->package "mlocate")
-     (specification->package "audit")
-     (specification->package "aide"))
-    %base-packages))
+(packages
+ (append
+  ;; ===========================
+  ;; Browser
+  ;; ===========================
+  (list 
+   zen-browser-bin
+   icecat
+   torbrowser)
+  ;; ===========================
+  ;; Drivers and Firmware
+  ;; ===========================
+  (list
+   xlibre-server
+   xlibre-input-libinput
+   xlibre-video-amdgpu
+   amd-microcode
+   amdgpu-firmware
+   mesa
+   mesa-headers
+   llvm-for-mesa
+   libva
+   libva-utils
+   vulkan-tools
+   vulkan-loader
+   linux-firmware
+   )
+
+  ;; ===========================
+  ;; X Utilities (Essential)
+  ;; ===========================
+  (list
+   xterm
+   xdpyinfo
+   xset
+   xwininfo
+   xprop
+   xpra
+   xkill
+   setxkbmap
+   xmodmap
+   figlet
+   xdg-utils
+   xrandr
+   xmonad
+   ghc-xmonad-contrib
+   )
+
+  ;; ===========================
+  ;; File and Disk Management
+  ;; ===========================
+  (list
+   lf
+   mergerfs
+   parted
+   ntfs-3g
+   exfat-utils
+   exfatprogs
+   fuse-exfat
+   dosfstools
+   bcachefs-tools
+   smartmontools
+   ueberzug++
+   )
+
+  ;; ===========================
+  ;; Development / Build Essentials
+  ;; ===========================
+  (list
+   gcc
+   gcc-toolchain
+   linux-libre-headers
+   git
+   git-lfs
+   ghc
+   cabal-install
+   python
+   python-pip
+   rust
+   go
+   node
+   yarn
+   cmake
+   meson
+   binutils
+   strace
+   edk2-tools
+   )
+
+  ;; ===========================
+  ;; Security / VPN / Cryptography
+  ;; ===========================
+  (list
+   acct
+   ansible
+   audit
+   sysstat
+   nftables
+   clamav
+   gnupg
+   libfido2
+   firejail
+   privoxy
+   openvpn
+   tor
+   torsocks
+   nmap
+   wireshark
+   tcpdump
+   openssl
+   keepassxc
+   kleopatra
+   hashcat
+   )
+
+  ;; ===========================
+  ;; Virtualization / Containers
+  ;; ===========================
+  (list
+   qemu
+   virt-manager
+   docker
+   containerd
+   )
+
+  ;; ===========================
+  ;; System Monitoring and Utilities
+  ;; ===========================
+  (list
+   htop
+   btop
+   glances
+   inxi
+   lm-sensors
+   radeontop
+   net-tools
+   fping
+   netdiscover
+   whois
+   macchanger
+   procps
+   sqlite
+   coreutils
+   grep
+   sed
+   jq
+   nix
+   )
+
+  ;; ===========================
+  ;; Audio (System-Level)
+  ;; ===========================
+  (list
+   alsa-lib
+   alsa-utils
+   pulseaudio
+   pipewire
+   wireplumber
+   )
+
+  ;; ===========================
+  ;; Base packages (Guix essentials)
+  ;; ===========================
+  %base-packages))
 
 ;; System Services
 ;; This section configures essential system services for connectivity, security,
@@ -1035,7 +795,7 @@ table inet filter {
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { $IPRANGE } accept comment \"Local networks\"
+        ip daddr { $LOCALNETWORK } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
