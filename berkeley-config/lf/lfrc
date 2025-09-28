@@ -1,61 +1,46 @@
-# --- Preview ---
-set previewer ~/.local/bin/lf/preview
+# Define preview script
+set previewer ~/.config/lf/wezterm-preview.sh
+
+# Define preview script
+set previewer ~/.config/wezterm/preview.lua
+
+# Usa o preview no lf
+map <C-p> :!wezterm cli spawn -- bash -c "$previewer %f"<CR>
+
+# --- Layout: files (left) + large preview (right) ---
 set preview true
-set ratios 2:5     # Left = 2, Right = 5 (preview)
+set ratios 2:5        # Left = 2 parts, Right = 5 parts → bigger preview
 set drawbox true
 
-# --- Columns ---
-set column 2       # duas colunas: arquivos + preview
-
-# --- Sorting ---
+# --- Sorting: newest first by modified time ---
 set sortby time
+set info time
 set reverse true
+# set dirfirst false   # uncomment if you don't want dirs at top
 
-# --- IFS ---
+# --- Safer IFS ---
 set ifs "\n"
 
 # --- Quit ---
 cmd q :quit
 
-# --- Copy filename ---
+# --- Copy filename without extension to clipboard ---
 cmd copy_filename ${{ 
     clean_filename=$(basename "$f")
     printf "%s" "${clean_filename%.*}" | xclip -selection clipboard
 }}
 map <c-e> :copy_filename <ret>
 
-# --- Open files ---
+# --- Open files with external apps ---
 cmd open ${{ 
     case "$f" in
-        *.jpg|*.jpeg|*.png|*.gif|*.bmp|*.webp)
-            feh --auto-zoom --scale-down --fullscreen --draw-filename --filename-bg black --filename-color yellow "$f" ;;
-        *.mp4|*.mkv|*.webm|*.avi|*.mov)
-            mpv "$f" ;;
-        *)
-            xdg-open "$f" ;;
+        *.jpg|*.jpeg|*.png|*.gif) xdg-open "$f" ;;
+        *.mp4|*.mkv)              mpv "$f"     ;;
+        *)                        xdg-open "$f";;
     esac
 }}
 map <c-o> :open <ret>
 
-# --- Abrir arquivos diretamente ---
-cmd open ${{ 
-    case "$f" in
-        *.jpg|*.jpeg|*.png|*.gif|*.bmp|*.webp|*.svg)
-            # Abre toda a pasta com Feh em fullscreen, zoom automático e nome do arquivo
-            feh --fullscreen \
-                --auto-zoom \
-                --draw-filename \
-                --reload 1 \
-                --sort filename \
-                --action1 "echo next" \
-                --action2 "echo prev" \
-                "$(dirname "$f")"
-            ;;
-        *.mp4|*.mkv) 
-            mpv "$f"
-            ;;
-        *) 
-            xdg-open "$f"
-            ;;
-    esac
-}}
+# --- Previewer / Cleaner ---
+set previewer ~/.local/bin/lf/preview
+set cleaner   ~/.local/bin/lf/cleaner
