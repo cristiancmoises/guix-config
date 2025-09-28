@@ -44,6 +44,11 @@
  (gnu home services sound)
  (gnu home services fontutils)
  (gnu packages file-systems)
+ (gnu packages libreoffice)
+ (gnu packages w3m)
+ (gnu packages textutils)
+ (gnu packages haskell-xyz)
+  (gnu packages xml)
  (gnu packages telegram)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
@@ -64,6 +69,7 @@
  (gnu packages gnupg)
  (gnu packages rust)
 (gnu packages ruby)
+(gnu packages ruby-xyz)
 (gnu packages compton)
 (gnu packages sqlite)
  (gnu packages password-utils)
@@ -139,6 +145,7 @@
  (nongnu packages game-client)      ; Non-GNU game clients
  (nongnu packages chrome)           ; Non-GNU Chrome browser
  (saayix packages binaries)        ; Custom binary packages
+ (saayix packages python-xyz)
  (gnu services dbus)
  (gnu home services sound))
 
@@ -185,6 +192,7 @@
    ;; Programming Languages
    bundler                     ;
    ruby                        ; 
+   jekyll
    ghc                         ; Haskell compiler
    cabal-install               ; Haskell package manager
    ghc-cabal-doctest           ; Haskell doctest support
@@ -193,6 +201,7 @@
    python                       ; Python
    python-pip                   ; Python package manager
    python-emoji                 ; Emoji support
+   certbot
    rust                         ; Rust
    node                         ; Node.js runtime
    git                          ; Version control
@@ -212,6 +221,7 @@
    pavucontrol
    pulsemixer
    ffmpeg                       ; Audio/video processing
+   ffmpegthumbnailer 
    mpv
    cmus
    gpac
@@ -244,10 +254,19 @@
    ranger                          ; Console file manager
    p7zip                           ; Archive tool
    qpdfview                         ; PDF viewer
+   libreoffice
+   xlsx2csv
+   odt2txt
+   w3m
+   atool
+   poppler
+   chafa
+   librsvg
    exfat-utils
    exfatprogs
    fuse-exfat
    ntfs-3g
+   pandoc
    parted
    smartmontools
    mergerfs
@@ -474,91 +493,94 @@
 
    ;; Fish Service
    ;; Configures Fish as the primary shell with Starship prompt and custom aliases
-   (service home-fish-service-type
-            (home-fish-configuration
-             (config
-              (list
-               (plain-file 
-                           "fish_greeting.fish"
-                           "function fish_greeting\n    echo \"\"\nend")
-               (plain-file "fish_init.fish"
-                           "set -x PATH $HOME/.guix-home/profile/bin $PATH\nstarship init fish | source\nbass source /home/berkeley/.config/nvm/nvm.sh --no-use"
-                           )))
-              (aliases
-              `(("torando" . "~/torando/torando.sh")
-                ("toroff" . "~/torando/toroff.sh")
-                ("toggle-vpn" . "~/toggle-vpn.sh")
-                ("vpn" . "mullvad relay set location br-sao-wg-201")
-                ("gi" . "eval (ssh-agent -c) && ssh-add ~/.ssh/securityops")
-                ("android" . "flatpak run com.google.AndroidStudio")
-                ("disc" . "flatpak run so.libdb.dissent")
-                ("tele" . "bash /files/scripts/telegram")
-                ("repair" . "guix gc --verify=repair,contents")
-                ("tx" . "bash /files/scripts/tmp.sh")
-                ("wp" . "bash /files/scripts/wal.sh")
-                ("gu" . "guix package -u")
-                ("cvi" . "convert original.png -resize 500% resized.png")
-                ("cvv" . "ffmpeg -i video.mkv -codec copy video.mp4")
-                ("bgv" . "mplayer -quiet -nosound -loop 0 -vo xv vid.mp4")
-                ("l" . "ls -g")
-                ("ll" . "ls -l")
-                ("grep" . "grep --color=auto")
-                ("del" . "shred -uvz")
-                ("gob" . "/files/scripts/gob.sh")
-                ("noise" . "~/.local/bin/noisetorch")
-                ("delp" . "wipe -r")
-                ("q" . "exit")
-                ("n" . "neofetch")
-                ("p" . "pfetch")
-                ("ss" . "sudo env TERM=xterm su -")
-                ("ee" . "exiftool -recursive -all=")
-                ("ex" . "exiftool -all= && del *original*")
-                ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://yt.securityops.co")
-                ("enc" . "tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz")
-                ("dec" . "openssl enc -d -aes256 -in secured.tar.gz | tar xz")
-                ("s" . "sensors")
-                ("clean" . "/files/scripts/git/cleanall/cleaner.sh")
-                ("e" . "cd ..")
-                ("up" . "/files/scripts/git/up.sh")
-                ("7" . "7z x")
-                ("ia" . "/usr/local/bin/yai")
-                ("wall" . "cp /home/berkeley/Downloads/wall.jpg /tmp && bg /tmp/wall.jpg")
-                ("help" . "del /tmp/*jpg /tmp/*webp /tmp/*png /tmp/*mp4 /tmp/*gif /tmp/*jpeg && rm -rf ad*")
-                ("now" . "cd /tmp && tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz && mv secured.tar.gz /files")
-                ("bb" . "bg /files/downloads/preto.jpg")
-                ("xx" . "bg /var/cache/wallpaper.png")
-                ("hot" . "cp /files/secured.tar.gz /tmp && cd /tmp && openssl enc -d -aes256 -in secured.tar.gz | tar xz")
-                ("big" . "find /home/berkeley -type f -size +1000M > /home/berkeley/big.txt")
-                ("zip" . "7z a arquivos")
-                ("h" . "haunt build && haunt serve")
-                ("vid" . "/files/scripts/vid.sh")
-                ("zap" . "/files/scripts/zap.sh")
-                ("torup" . "/files/scripts/torup.sh")
-                ("gangsta" . "/files/scripts/music.sh")
-                ("sss" . "/files/scripts/sss.sh")
-                ("lf" . "~/.local/bin/lf/lfrun")
-                ("gif" . "/files/scripts/gif.sh")
-                ("giff" . "/files/scripts/gif2.sh")
-                ("br" . "/files/scripts/br.sh")
-                ("wik" . "/files/scripts/wiki.sh")
-                ("upp" . "/files/scripts/up.sh")
-                ("rec" . "/files/scripts/record/record")
-                ("post" . "bash /files/scripts/copycat.sh")
-                ("torb" . "/files/scripts/torbrowser.sh")
-                ("ice" . "/files/scripts/icecat.sh")
-                ("bw" . "bg /home/berkeley/Downloads/wall2.jpg")
-                ("mp" . "/files/scripts/mpv.sh")
-                ("term" . "/files/scripts/terminator.sh")
-                ("s1" . "/files/scripts/server.sh")
-                ("gitlfs" . "/files/scripts/lfs.sh")
-                ("class" . "mpv /files/music/Classical/classic/*")
-                ("cam" . "/files/scripts/cam.sh")
-                ("c" . "clear")
-                ("chromium" . "nix-shell -p ungoogled-chromium")
-                ("vis" . "/home/berkeley/.guix-profile/bin/vis")
-                ("news" . "twtxt timeline")
-                ("tempo" . "curl 'wttr.in/caxias_do_sul?date=next7'")
-                ("bun" . "/home/berkeley/.bun/bin/bun")))))
+ (service home-fish-service-type
+  (home-fish-configuration
+    (config
+      (list
+        (plain-file
+          "fish_greeting.fish"
+          "function fish_greeting\n    echo \"\"\nend")
+        (plain-file
+          "fish_init.fish"
+          "set -x PATH $HOME/.guix-home/profile/bin $PATH
+starship init fish | source
+zoxide init fish | source
+bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
+    (aliases
+      `(("torando" . "~/torando/torando.sh")
+        ("toroff" . "~/torando/toroff.sh")
+        ("toggle-vpn" . "~/toggle-vpn.sh")
+        ("vpn" . "mullvad relay set location br-sao-wg-201")
+        ("gi" . "eval (ssh-agent -c) && ssh-add ~/.ssh/securityops")
+        ("android" . "flatpak run com.google.AndroidStudio")
+        ("disc" . "flatpak run so.libdb.dissent")
+        ("tele" . "bash /files/scripts/telegram")
+        ("repair" . "guix gc --verify=repair,contents")
+        ("tx" . "bash /files/scripts/tmp.sh")
+        ("wp" . "bash /files/scripts/wal.sh")
+        ("gu" . "guix package -u")
+        ("cvi" . "convert original.png -resize 500% resized.png")
+        ("cvv" . "ffmpeg -i video.mkv -codec copy video.mp4")
+        ("bgv" . "mplayer -quiet -nosound -loop 0 -vo xv vid.mp4")
+        ("l" . "ls -g")
+        ("ll" . "ls -l")
+        ("grep" . "grep --color=auto")
+        ("del" . "shred -uvz")
+        ("gob" . "/files/scripts/gob.sh")
+        ("noise" . "~/.local/bin/noisetorch")
+        ("delp" . "wipe -r")
+        ("q" . "exit")
+        ("n" . "neofetch")
+        ("p" . "pfetch")
+        ("ss" . "sudo env TERM=xterm su -")
+        ("ee" . "exiftool -recursive -all=")
+        ("ex" . "exiftool -all= && del *original*")
+        ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://inv.nadeko.net")
+        ("enc" . "tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz")
+        ("dec" . "openssl enc -d -aes256 -in secured.tar.gz | tar xz")
+        ("s" . "sensors")
+        ("clean" . "/files/scripts/git/cleanall/cleaner.sh")
+        ("e" . "cd ..")
+        ("up" . "/files/scripts/git/up.sh")
+        ("7" . "7z x")
+        ("ia" . "/usr/local/bin/yai")
+        ("wall" . "cp /home/berkeley/Downloads/wall.jpg /tmp && bg /tmp/wall.jpg")
+        ("help" . "del /tmp/*jpg /tmp/*webp /tmp/*png /tmp/*mp4 /tmp/*gif /tmp/*jpeg && rm -rf ad*")
+        ("now" . "cd /tmp && tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz && mv secured.tar.gz /files")
+        ("bb" . "bg /files/downloads/preto.jpg")
+        ("xx" . "bg /var/cache/wallpaper.png")
+        ("hot" . "cp /files/secured.tar.gz /tmp && cd /tmp && openssl enc -d -aes256 -in secured.tar.gz | tar xz")
+        ("big" . "find /home/berkeley -type f -size +1000M > /home/berkeley/big.txt")
+        ("zip" . "7z a arquivos")
+        ("h" . "haunt build && haunt serve")
+        ("vid" . "/files/scripts/vid.sh")
+        ("zap" . "/files/scripts/zap.sh")
+        ("torup" . "/files/scripts/torup.sh")
+        ("gangsta" . "/files/scripts/music.sh")
+        ("sss" . "/files/scripts/sss.sh")
+        ("lf" . "~/.local/bin/lf/lfrun")
+        ("gif" . "/files/scripts/gif.sh")
+        ("giff" . "/files/scripts/gif2.sh")
+        ("br" . "/files/scripts/br.sh")
+        ("wik" . "/files/scripts/wiki.sh")
+        ("upp" . "/files/scripts/up.sh")
+        ("rec" . "/files/scripts/record/record")
+        ("post" . "bash /files/scripts/copycat.sh")
+        ("torb" . "/files/scripts/torbrowser.sh")
+        ("ice" . "/files/scripts/icecat.sh")
+        ("bw" . "bg /home/berkeley/Downloads/wall2.jpg")
+        ("mp" . "/files/scripts/mpv.sh")
+        ("term" . "/files/scripts/terminator.sh")
+        ("s1" . "/files/scripts/server.sh")
+        ("gitlfs" . "/files/scripts/lfs.sh")
+        ("class" . "mpv /files/music/Classical/classic/*")
+        ("cam" . "/files/scripts/cam.sh")
+        ("c" . "clear")
+        ("chromium" . "nix-shell -p ungoogled-chromium")
+        ("vis" . "/home/berkeley/.guix-profile/bin/vis")
+        ("news" . "twtxt timeline")
+        ("tempo" . "curl 'wttr.in/caxias_do_sul?date=next7'")
+        ("bun" . "/home/berkeley/.bun/bin/bun")))))
 
    ;; XDG MIME Applications
    ;; Configures default applications for file types and protocols

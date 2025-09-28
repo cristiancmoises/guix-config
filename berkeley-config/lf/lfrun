@@ -1,4 +1,5 @@
 #!/bin/sh
+# ~/.local/bin/lf/cleaner 
 set -e
 
 cleanup() {

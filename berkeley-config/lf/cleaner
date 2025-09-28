@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# ~/.local/bin/lf/cleaner 
+# Remove previous preview
+
+[ -n "$FIFO_UEBERZUG" ] && [ -p "$FIFO_UEBERZUG" ] && \
+    printf '{"action":"remove","identifier":"PREVIEW"}\n' > "$FIFO_UEBERZUG"
