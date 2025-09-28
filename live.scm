@@ -46,6 +46,7 @@
  (xlibre)
  (guix gexp)
  (nongnu packages video)
+ (nongnu system linux-initrd)
  (gnu packages assembly)
  (gnu packages flashing-tools)
 (guix build-system linux-module)
@@ -209,7 +210,6 @@
  (nongnu packages clojure)     ; Clojure programming language packages
  (nongnu packages linux)       ; Non-GNU Linux-related packages
  (nongnu packages chrome)      ; Non-GNU Chrome browser packages
- (nongnu system linux-initrd)  ; Non-GNU Linux initrd system
  )
 
 ;; Import service modules for system services
@@ -219,17 +219,18 @@
 ;; Import package modules for package management tools
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
+(local-file "/etc/securityops.defconfig")
 
 (define-public securityops
   (package
     (inherit linux-6.16)
-    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
-    (version "n.n")       ; 
+    (name "securityops")               ; <-- A CHAD KERNEL HERE!
+    (version "n.n")                    ; you can keep inherit version too
     (arguments
      (substitute-keyword-arguments (package-arguments linux-6.16)
-       ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
-       ;; Keep all default phases
-       ((#:phases phases) phases)))))
+       ((#:configs _)
+        (list (local-file "/etc/securityops.defconfig")))))))
+
 
 ;; -------------------------------------------------------------------
 ;; XLibre Configuration for AMDGPU with native resolution 1366x768
@@ -399,7 +400,7 @@ EndSection"))))
 
 
   ;; Set system locale to Brazilian Portuguese
-  (locale "pt_BR.UTF-8")
+  (locale "en_US.UTF-8")
   
   ;; Set timezone to São Paulo, Brazil
   (timezone "America/Sao_Paulo")
@@ -485,6 +486,8 @@ EndSection"))))
   ;; File and Disk Management
   ;; ===========================
   (list
+   zfs
+   zfs-auto-snapshot 
    lf
    mergerfs
    parted
@@ -544,7 +547,6 @@ EndSection"))))
    tcpdump
    openssl
    keepassxc
-   kleopatra
    hashcat
    )
 
@@ -604,6 +606,7 @@ EndSection"))))
 (services
  (append
   (list
+  
   ;; Device Authorization Udev Rules 
 (udev-rules-service
  'device-authorization
@@ -825,15 +828,8 @@ SafeLogging 1
 ;; ─── Bootloader for Live ISO ───────────────────────────────
 (bootloader
   (bootloader-configuration
-    (bootloader grub-bootloader)
-    (targets '()) 
-    (theme
-      (grub-theme
-        (resolution '(1920 . 1080))
-        (image (local-file "/home/berkeley/wallpapers/back.png"))))))
-  
-;; Swap Space
-(swap-devices '())
+    (bootloader grub-bootloader)   
+    (targets '("/dev/sdX")))) 
 
 ;; File Systems
 (file-systems

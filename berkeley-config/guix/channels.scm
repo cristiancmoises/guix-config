@@ -19,7 +19,7 @@
   
   (channel
    (name 'nonguix)
-   (url "https://gitlab.com/nonguix/nonguix")
+   (url "https://git.envs.net/cristiancmoises/nonguix")
    (introduction
     (make-channel-introduction
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
@@ -28,7 +28,7 @@
   
   (channel
    (name 'rde)
-   (url "https://git.sr.ht/~abcdw/rde")
+   (url "https://git.envs.net/cristiancmoises/rde")
    (introduction
     (make-channel-introduction
      "257cebd587b66e4d865b3537a9a88cccd7107c95"
@@ -37,7 +37,7 @@
   
   (channel
    (name 'radix)
-   (url "https://codeberg.org/anemofilia/radix.git")
+   (url "https://git.envs.net/cristiancmoises/radix.git")
    (branch "main")
    (introduction
     (make-channel-introduction
@@ -47,7 +47,7 @@
   
   (channel
    (name 'ajattix)
-   (url "https://git.ajattix.org/hashirama/ajattix.git")
+   (url "https://git.envs.net/cristiancmoises/ajattix.git")
    (branch "main")
    (introduction
     (make-channel-introduction
@@ -57,7 +57,7 @@
   
   (channel
    (name 'rosenthal)
-   (url "https://codeberg.org/hako/rosenthal.git")
+   (url "https://git.envs.net/cristiancmoises/rosenthal.git")
    (branch "trunk")
    (introduction
     (make-channel-introduction
@@ -67,12 +67,12 @@
   
   (channel
    (name 'guix-hpc)
-   (url "https://gitlab.inria.fr/guix-hpc/guix-hpc.git")
+   (url "https://git.envs.net/cristiancmoises/guix-hpc.git")
    (branch "master"))
   
 (channel
         (name 'small-guix)
-        (url "https://codeberg.org/fishinthecalculator/small-guix.git")
+        (url "https://git.envs.net/cristiancmoises/small-guix.git")
         (branch "main")
         ;; Enable signature verification:
         (introduction
@@ -83,13 +83,13 @@
 
   (channel
     (name 'guix-xlibre)
-    (url "https://gitlab.vulnix.sh/spacecadet/guix-xlibre.git")
+    (url "https://git.envs.net/cristiancmoises/guix-xlibre.git")
     (branch "master"))
 
   (channel
    (name 'saayix)
    (branch "main")
-   (url "https://codeberg.org/look/saayix")
+   (url "https://git.envs.net/cristiancmoises/saayix")
    (introduction
     (make-channel-introduction
      "12540f593092e9a177eb8a974a57bb4892327752"

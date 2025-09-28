@@ -7,7 +7,7 @@
 ;; configuration in /etc/config.scm, which uses xlibre for graphics, Mullvad VPN for
 ;; privacy, and Tor for anonymity. The environment supports development (Emacs, Guile,
 ;; Rust, Haskell), multimedia (MPV, FFmpeg), file management (lf, ranger), and
-;; Japanese input via Fcitx. Fish is the primary shell with Starship for prompt
+;; Fish is the primary shell with Starship for prompt
 ;; customization, and Xmonad is used as the window manager (assumed compatible with
 ;; xlibre). MIME associations ensure seamless file handling, and font settings optimize
 ;; display rendering with Iosevka as the preferred sans-serif font.
@@ -17,7 +17,6 @@
 ;;   - Development: Emacs with plugins, Guile, Haskell, Rust, and C++ support.
 ;;   - Multimedia: MPV, FFmpeg, and image processing tools.
 ;;   - Privacy: Tor, Mullvad VPN integration, and secure file handling.
-;;   - Japanese Input: Fcitx with GTK/Qt integration.
 ;;   - Aesthetics: Iosevka font, MIME associations, and lightweight tools.
 ;;
 ;; Usage:
@@ -25,7 +24,6 @@
 ;;   - Validate configuration: `guix home build ~/.config/guix/home.scm`
 ;;   - Apply configuration: `guix home reconfigure ~/.config/guix/home.scm`
 ;;   - Verify environment: `env | grep -E 'PATH|EDITOR|BROWSER|SHELL'`
-;;   - Test Japanese input: `fcitx5-configtool`
 ;;   - Monitor logs: `tail -f ~/.local/share/xmonad/xmonad.log` (if Xmonad is used)
 ;;   - Verify font: `fc-match sans-serif` (should return Iosevka)
 ;;
@@ -34,21 +32,24 @@
 ;;   - Replace placeholder paths (e.g., /files/scripts) with generic ones if sharing.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 13, 2025
+;; Last Updated: August 02, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for home environment, packages, and services
 (use-modules
+ (gnu packages base)
  (gnu home)                         ; Core Guix home environment module
  (gnu home services)                ; Home service definitions
  (gnu home services desktop)
  (gnu home services sound)
  (gnu home services fontutils)
  (gnu packages file-systems)
+ (gnu packages telegram)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
  (gnu home-services wm)        ; Window manager home services
  (ajatt packages video)
+ (ajatt packages audio)
  (gnu home services shells)         ; Shell configuration services
  (gnu home services xdg)            ; XDG MIME and desktop integration
  (gnu packages python-xyz)
@@ -62,6 +63,7 @@
 (gnu packages cran)
  (gnu packages gnupg)
  (gnu packages rust)
+(gnu packages ruby)
 (gnu packages compton)
 (gnu packages sqlite)
  (gnu packages password-utils)
@@ -73,7 +75,8 @@
   (gnu packages kde-pim)
  (gnu packages networking)
  (gnu packages golang)
-(gnu packages wm)
+ (gnu packages wm)
+ (gnu packages ruby-check)
  (gnu packages firmware)
  (gnu packages version-control)
  (gnu packages node)
@@ -116,6 +119,7 @@
  (gnu packages text-editors)        ; Text editors
  (gnu packages tor)                 ; Tor anonymity network
  (gnu packages video)               ; Video tools
+ (gnu packages music)               ; Audio tools 
  (gnu packages web)                 ; Web-related tools
  (gnu packages web-browsers)        ; Web browsers
  (gnu packages xdisorg)             ; X11 display organization (for xlibre compatibility)
@@ -177,9 +181,11 @@
    fzf                         ; Fuzzy finder
    jq                          ; JSON processor
    pkg-config                  ; Package config tool
-
+   haunt                       ; SCHEME Web builder
    ;; Programming Languages
-   ghc                          ; Haskell compiler
+   bundler                     ;
+   ruby                        ; 
+   ghc                         ; Haskell compiler
    cabal-install               ; Haskell package manager
    ghc-cabal-doctest           ; Haskell doctest support
    go                           ; Go language
@@ -206,9 +212,11 @@
    pavucontrol
    pulsemixer
    ffmpeg                       ; Audio/video processing
+   mpv
+   cmus
    gpac
    vvdec-app
-   openshot
+   ;openshot
    mplayer                       ; Media player
    obs                           ; Streaming & recording
    obs-pipewire-audio-capture
@@ -222,7 +230,10 @@
    alsa-lib
    alsa-utils
    pavucontrol-qt
+   qtwebengine
    vlc
+   steam
+   navidrome-bin
    )
 
   ;; ===========================
@@ -257,11 +268,14 @@
    gnome-tweaks
    lxappearance
    flatpak-xdg-utils
+   flatpak
    starship
    neofetch
    pfetch
    lm-sensors
-
+   fastfetch
+   bat
+   zoxide
    ;; Bars, notifications, and window management
    polybar
    waybar
@@ -295,7 +309,6 @@
    gnupg
    hashcat
    keepassxc
-   kleopatra
    ansible
    nftables
    tor
@@ -314,16 +327,6 @@
   (list
    nano
    emacs
-   emacs-arei
-   emacs-eat
-   emacs-rainbow-delimiters
-   emacs-nyxt
-   emacs-olivetti
-   emacs-deadgrep
-   emacs-rg
-   emacs-dumb-jump
-   emacs-slime
-   emacs-dirvish
    emacs-nerd-icons
    emacs-telega
    neovim
@@ -342,24 +345,82 @@
   ;; Fonts
   ;; ===========================
   (list
-   font-iosevka
-   font-iosevka-aile
-   font-iosevka-etoile
-   font-iosevka-slab
-   font-iosevka-term
-   font-iosevka-term-slab
-   font-fira-code
-   font-fira-mono
-   font-fira-sans
-   font-jetbrains-mono
-   font-dejavu
-   font-liberation
-   font-terminus
-   font-hack
-   font-anonymous-pro
-   font-adobe-source-code-pro
-   font-google-noto-emoji
-   font-openmoji
+ ;; Fonts
+     font-dejavu               ; DejaVu font family for general use
+     font-adobe-source-code-pro ; Monospace font for coding
+     font-adobe-source-han-sans ; CJK font for Chinese, Japanese, Korean
+     font-adobe-source-sans-pro ; Sans-serif font for documents
+     font-adobe-source-serif-pro ; Serif font for documents
+     font-anonymous-pro        ; Monospace font for programming
+     font-anonymous-pro-minus  ; Variant of Anonymous Pro
+     font-awesome              ; Icon font for UI elements
+     font-cns11643             ; CJK font for traditional Chinese
+     font-cns11643-swjz        ; Simplified Chinese variant of CNS11643
+     font-comic-neue           ; Casual comic-style font
+     font-culmus               ; Hebrew fonts
+     font-dosis                ; Rounded sans-serif font
+     font-dseg                 ; Retro-style segmented display font
+     font-fantasque-sans       ; Monospace font with a quirky design
+     font-fira-code            ; Monospace font with ligatures for coding
+     font-fira-mono            ; Monospace font for programming
+     font-fira-sans            ; Sans-serif font for UI and documents
+     font-fontna-yasashisa-antique ; Japanese font with a soft aesthetic
+     font-google-noto-emoji    ; Font Emojis
+     font-google-material-design-icons ; Material Design icons
+     font-google-noto          ; Comprehensive font for multiple scripts
+     font-google-roboto        ; Modern sans-serif font
+     font-gnu-freefont         ; GNU FREE
+     font-hack                 ; Monospace font for coding
+     font-hermit               ; Monospace font with clean design
+     font-ibm-plex             ; Modern font family for UI and documents
+     font-inconsolata          ; Monospace font for programming
+     font-iosevka              ; Highly customizable monospace font
+     font-iosevka-aile         ; Iosevka variant with cursive style
+     font-iosevka-etoile       ; Iosevka variant with decorative style
+     font-iosevka-slab         ; Iosevka with slab serifs
+     font-iosevka-term         ; Iosevka optimized for terminals
+     font-iosevka-term-slab    ; Iosevka terminal font with slab serifs
+     font-ipa-mj-mincho        ; Japanese Mincho font
+     font-jetbrains-mono       ; Monospace font for developers
+     font-lato                 ; Sans-serif font for modern design
+     font-liberation           ; Open-source font family
+     font-linuxlibertine       ; Serif font for documents
+     font-lohit                ; Fonts for Indian scripts
+     font-meera-inimai         ; Tamil font
+     font-mononoki             ; Monospace font for coding
+     font-mplus-testflight     ; Japanese font family
+     font-public-sans          ; Clean sans-serif font
+     font-rachana              ; Malayalam font
+     font-sarasa-gothic        ; CJK font with gothic style
+     font-sil-andika           ; Font for literacy and education
+     font-sil-charis           ; Serif font for publishing
+     font-sil-gentium          ; High-quality serif font
+     font-tamzen               ; Monospace bitmap font
+     font-terminus             ; Monospace bitmap font
+     font-tex-gyre             ; Professional font family for documents
+     font-un                   ; Korean font
+     font-vazir                ; Persian font
+     font-wqy-microhei         ; CJK font for Chinese
+     font-wqy-zenhei           ; CJK font for Chinese
+     font-adobe100dpi          ; Adobe bitmap fonts (100 DPI)
+     font-adobe75dpi           ; Adobe bitmap fonts (75 DPI)
+     font-cronyx-cyrillic      ; Cyrillic bitmap fonts
+     font-dec-misc             ; Miscellaneous bitmap fonts
+     font-isas-misc            ; Miscellaneous bitmap fonts
+     font-micro-misc           ; Small bitmap fonts
+     font-misc-cyrillic        ; Cyrillic bitmap fonts
+     font-misc-ethiopic        ; Ethiopic bitmap fonts
+     font-misc-misc            ; Miscellaneous bitmap fonts
+     font-mutt-misc            ; Bitmap fonts for Mutt
+     font-schumacher-misc      ; Classic bitmap fonts
+     font-screen-cyrillic      ; Cyrillic fonts for terminal
+     font-sony-misc            ; Sony bitmap fonts
+     font-sun-misc             ; Sun bitmap fonts
+     font-util                 ; Font utilities
+     font-winitzki-cyrillic    ; Cyrillic bitmap fonts
+     font-xfree86-type1        ; Type1 fonts for X11
+     font-google-noto-emoji    ; Noto emoji font
+     font-openmoji             ; Open-source emoji font
    unicode-emoji
    r-emojifont
    emacs-emojify
@@ -370,6 +431,8 @@
   ;; Optional / Extras moved from config.scm
   ;; ===========================
   (list
+   nyxt
+   google-chrome-stable
    kitty
    alacritty
    flameshot
@@ -415,16 +478,17 @@
             (home-fish-configuration
              (config
               (list
-               (plain-file "fish_greeting.fish"
+               (plain-file 
+                           "fish_greeting.fish"
                            "function fish_greeting\n    echo \"\"\nend")
                (plain-file "fish_init.fish"
-                           "set -x PATH $HOME/.guix-home/profile/bin $PATH\nstarship init fish | source\nbass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
-             (aliases
+                           "set -x PATH $HOME/.guix-home/profile/bin $PATH\nstarship init fish | source\nbass source /home/berkeley/.config/nvm/nvm.sh --no-use"
+                           )))
+              (aliases
               `(("torando" . "~/torando/torando.sh")
                 ("toroff" . "~/torando/toroff.sh")
                 ("toggle-vpn" . "~/toggle-vpn.sh")
                 ("vpn" . "mullvad relay set location br-sao-wg-201")
-                ("rustdesk" . "flatpak run com.rustdesk.RustDesk")
                 ("gi" . "eval (ssh-agent -c) && ssh-add ~/.ssh/securityops")
                 ("android" . "flatpak run com.google.AndroidStudio")
                 ("disc" . "flatpak run so.libdb.dissent")
@@ -520,7 +584,6 @@
                    `(("PATH" . "$HOME/.local/bin:/home/berkeley/.bun/bin:$PATH")
                      ("GUIX_SANDBOX_EXTRA_SHARES" . "/mnt/games")
                      ("GUILE_WARN_DEPRECATED" . "detailed")
-                     ("GUILE_LOAD_PATH" . "$HOME/dev/guix_channel/ajatt-tools-guix:$GUILE_LOAD_PATH")
                      ("GTK_IM_MODULE" . "fcitx")
                      ("QT_IM_MODULE" . "fcitx")
                      ("XMODIFIERS" . "@im=fcitx")

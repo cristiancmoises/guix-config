@@ -3,9 +3,9 @@
 ;;
 ;; This configuration defines a secure, privacy-focused Guix system tailored for a machine
 ;; with AMD Ryzen 2200G and Radeon RX 5600/5700 series GPU. It uses a custom linux
-;; kernel optimized for performance and security (SecurityOps kernel), 
-;; with a strict NFTables firewall to route  all traffic through Mullvad VPN by default.
-;; Tor is configured for occasional use providing transparent proxying (SOCKS 9050,
+;; kernel optimized for performance and security, with a strict NFTables firewall to route
+;; all traffic through Mullvad VPN (WireGuard, wg0-mullvad) by default. Tor is configured
+;; for occasional use via torando scripts, providing transparent proxying (SOCKS 9050,
 ;; TransPort 9040). The system supports web browsing (Zen Browser, Icecat, Tor Browser),
 ;; Guix upgrades, torrenting (qBittorrent), Steam gaming, and SSH, with Xmonad as the
 ;; window manager, Rofi for launching applications, and Fish Shell with Starship for an
@@ -34,7 +34,7 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 13, 2025
+;; Last Updated: 27 September, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
@@ -45,7 +45,8 @@
  (guix ui)                     ; UI 
  (xlibre)
  (guix gexp)
-(guix build-system linux-module)
+ (gnu packages shells)
+ (guix build-system linux-module)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
  (gnu bootloader grub)         ; GRUB bootloader support
@@ -55,7 +56,6 @@
  (gnu packages haskell-apps)   ; Haskell application packages
  (gnu packages acct)           ; Audit
  (nongnu packages anydesk)     ; AnyDesk for remote desktop
- (gnu packages telegram)       ; Telegram-related packages
  (gnu packages llvm)           ; LLVM compiler infrastructure packages
  (gnu packages vulkan)         ; Vulkan graphics API packages
  (gnu packages gnome)          ; GNOME desktop environment packages
@@ -112,6 +112,7 @@
  (gnu packages kde)            ; KDE desktop environment packages
  (gnu packages docker)         ; Docker containerization packages
  (gnu services docker)         ; Docker service definitions
+ (gnu packages containers)     ; Podman packages
  (gnu services certbot)        ; Certbot service for SSL/TLS certificates
  (gnu packages unicode)        ; Unicode-related packages
  (gnu packages python-build)   ; Python build tools
@@ -219,11 +220,11 @@
 
 (define-public securityops
   (package
-    (inherit linux-6.16)
+    (inherit linux)
     (name "securityops")                 ; <-- A CHAD KERNEL HERE!
     (version "n.n")       ; 
     (arguments
-     (substitute-keyword-arguments (package-arguments linux-6.16)
+     (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
        ;; Keep all default phases
        ((#:phases phases) phases)))))
@@ -465,12 +466,14 @@ EndSection"
 (packages
  (append
   ;; ===========================
-  ;; Browser
+  ;; Browser & Apps
   ;; ===========================
   (list 
    zen-browser-bin
    icecat
-   torbrowser)
+   torbrowser
+   jami
+   steam)
   ;; ===========================
   ;; Drivers and Firmware
   ;; ===========================
@@ -513,7 +516,7 @@ EndSection"
   ;; ===========================
   ;; File and Disk Management
   ;; ===========================
-  (list
+  ( list
    lf
    mergerfs
    parted
@@ -525,6 +528,9 @@ EndSection"
    bcachefs-tools
    smartmontools
    ueberzug++
+   e2fsprogs
+   dosfstools
+   xfsprogs
    )
 
   ;; ===========================
@@ -543,12 +549,20 @@ EndSection"
    rust
    go
    node
+   haunt
    yarn
    cmake
    meson
    binutils
    strace
    edk2-tools
+   kitty
+   alacritty
+   fish
+   bat
+   zoxide
+   fastfetch
+   pfetch
    )
 
   ;; ===========================
@@ -573,7 +587,6 @@ EndSection"
    tcpdump
    openssl
    keepassxc
-   kleopatra
    hashcat
    )
 
@@ -584,6 +597,8 @@ EndSection"
    qemu
    virt-manager
    docker
+   runc
+   podman
    containerd
    )
 
@@ -795,7 +810,7 @@ table inet filter {
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { $LOCALNETWORK } accept comment \"Local networks\"
+        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, $MULLVADIP } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
@@ -865,7 +880,6 @@ ExitPolicy reject *:*
 # Scrub sensitive info from logs
 SafeLogging 1
 "))))
-
    ;; Libvirt Virtualization Service
    ;; Configures libvirt for virtual machine management with Unix socket group
    ;; and TLS port for secure connections
