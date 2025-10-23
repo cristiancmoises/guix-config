@@ -47,12 +47,17 @@
  (gnu packages libreoffice)
  (gnu packages w3m)
  (gnu packages textutils)
+ (gnu packages gimp)
  (gnu packages haskell-xyz)
-  (gnu packages xml)
+ (gnu packages xml)
  (gnu packages telegram)
+ (gnu packages games)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
  (gnu home-services wm)        ; Window manager home services
+ (gnu packages commencement)
+ (gnu packages vulkan)
+ (gnu packages glib)
  (ajatt packages video)
  (ajatt packages audio)
  (gnu home services shells)         ; Shell configuration services
@@ -62,23 +67,24 @@
  (radix services admin)        ; Custom admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
  (radix packages image-viewers) ; Custom image viewer packages
-(gnu packages vpn)
-(gnu packages image)
-(gnu packages vim)
-(gnu packages cran)
+ (gnu packages gcc)
+ (gnu packages vpn)
+ (gnu packages image)
+ (gnu packages vim)
+ (gnu packages cran)
  (gnu packages gnupg)
  (gnu packages rust)
-(gnu packages ruby)
-(gnu packages ruby-xyz)
-(gnu packages compton)
-(gnu packages sqlite)
+ (gnu packages ruby)
+ (gnu packages ruby-xyz)
+ (gnu packages compton)
+ (gnu packages sqlite)
  (gnu packages password-utils)
  (gnu packages python-build)
  (gnu packages unicode)
  (gnu packages lxqt)
  (gnu packages java)
  (gnu packages xorg)
-  (gnu packages kde-pim)
+ (gnu packages kde-pim)
  (gnu packages networking)
  (gnu packages golang)
  (gnu packages wm)
@@ -146,6 +152,7 @@
  (nongnu packages chrome)           ; Non-GNU Chrome browser
  (saayix packages binaries)        ; Custom binary packages
  (saayix packages python-xyz)
+ (gnu packages kde)
  (gnu services dbus)
  (gnu home services sound))
 
@@ -189,9 +196,16 @@
    jq                          ; JSON processor
    pkg-config                  ; Package config tool
    haunt                       ; SCHEME Web builder
-   ;; Programming Languages
+   gcc-toolchain
+   gtk
+   glib
+   alsa-lib
+   pkg-config 
+  ;; Programming Languages
    bundler                     ;
    ruby                        ; 
+   ruby-json
+   gcc
    jekyll
    ghc                         ; Haskell compiler
    cabal-install               ; Haskell package manager
@@ -216,20 +230,36 @@
   ;; Multimedia / Audio / Video
   ;; ===========================
   (list
+   mesa-utils
+   libva
+   libvdpau
+   vulkan-loader
+   vulkan-headers
+   libass
+   enca
+   uchardet
+   libdvdcss
+   libdvdread
+   libdvdnav
+   libbluray
+   libxml2
    pipewire
    wireplumber
    pavucontrol
    pulsemixer
+   v4l-utils
    ffmpeg                       ; Audio/video processing
    ffmpegthumbnailer 
+   guvcview
+   cmatrix
    mpv
    cmus
    gpac
    vvdec-app
-   ;openshot
+   gimp
    mplayer                       ; Media player
-   obs                           ; Streaming & recording
-   obs-pipewire-audio-capture
+   ;obs
+   ;obs-pipewire-audio-capture    ;
    imagemagick                   ; Image manipulation
    perl-image-exiftool           ; Metadata extraction
    noisetorch
@@ -250,11 +280,13 @@
   ;; File and Disk Management
   ;; ===========================
   (list
+   wipe
    lf                             ; Minimalist file manager
    ranger                          ; Console file manager
    p7zip                           ; Archive tool
    qpdfview                         ; PDF viewer
    libreoffice
+   zip
    xlsx2csv
    odt2txt
    w3m
@@ -294,6 +326,9 @@
    lm-sensors
    fastfetch
    bat
+   qtbase
+   mesa
+   qtwayland
    zoxide
    ;; Bars, notifications, and window management
    polybar
@@ -357,6 +392,7 @@
   ;; ===========================
   (list
    higan
+   qbittorrent
    at-spi2-core                   ; Accessibility
    )
 
@@ -597,7 +633,6 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
    (simple-service 'font-antialias
                    home-fontconfig-service-type
                    (list "~/.local/share/fonts" fontconfig))
-
 
    ;; Environment Variables
    ;; Sets user-wide environment variables for paths, editors, and input methods

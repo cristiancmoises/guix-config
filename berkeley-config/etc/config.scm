@@ -34,12 +34,13 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: 27 September, 2025
+;; Last Updated: August 02, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
 (use-modules
  (gnu)                         ; Core Guix module for system and package management
+ (guix download)
  (guix utils)
  (guix build-system gnu)
  (guix ui)                     ; UI 
@@ -109,7 +110,6 @@
  (gnu packages finance)        ; Finance-related packages
  (gnu packages pdf)            ; PDF-related packages
  (gnu packages cran)           ; CRAN (R) packages
- (gnu packages kde)            ; KDE desktop environment packages
  (gnu packages docker)         ; Docker containerization packages
  (gnu services docker)         ; Docker service definitions
  (gnu packages containers)     ; Podman packages
@@ -218,11 +218,21 @@
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
 
+;(define-public securityops
+;  (package
+;    (inherit linux)
+;    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
+;    (version "n.n")       ; 
 (define-public securityops
   (package
     (inherit linux)
-    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
-    (version "n.n")       ; 
+    (name "securityops")
+    (version "6.17")
+    (source (origin
+              (method url-fetch)
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.4.tar.xz")
+              (sha256
+               (base32 "1nwi0hzikziwkxm9xzf819wb3lsz93i1ns1nzybpbfkgdqli42h1"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -383,7 +393,7 @@ EndSection"
      "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
      "mce=1"                          ; Machine Check Exception handling
      ;; ─── USB Security ───────────────────────────────────────────────
-     "usbcore.authorized_default=0"  ; Disable auto-authorizing USB devices (anti-badusb)
+     ; "usbcore.authorized_default=0"  ; Disable auto-authorizing USB devices (anti-badusb)
      ;; ─── Networking Optimizations ───────────────────────────────────
      "tcp_congestion_control=bbr"     ; Use BBR for efficient TCP congestion control
      "net.core.default_qdisc=fq_codel" ; Use fq_codel for fair network queuing
@@ -450,16 +460,22 @@ EndSection"
   (host-name "securityops")
   
   ;; The list of user accounts ('root' is implicit).
-  (users
-   (cons*
-    ;; Existing user: Berkeley
-    (user-account
+(users
+ (cons*
+   (user-account
      (name "berkeley")
-     (comment "Berkeley")
+     (comment "berkeley")
      (group "users")
      (home-directory "/home/berkeley")
      (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")))
-    %base-user-accounts))
+   (user-account
+     (name "leticia")
+     (comment "Letícia")
+     (group "users")
+     (home-directory "/home/leticia")
+     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")) )
+   %base-user-accounts))
+
   
 ;; Minimal essential packages only
 
@@ -478,6 +494,9 @@ EndSection"
   ;; Drivers and Firmware
   ;; ===========================
   (list
+   acpi-call-linux-module
+   util-linux
+   v4l2loopback-linux-module
    xlibre-server
    xlibre-input-libinput
    xlibre-video-amdgpu
@@ -686,67 +705,13 @@ EndSection"
              (auto-enable? #t)))
    
    ;; Device Authorization Udev Rules
-   ;; Consolidates rules for FIDO2/U2F and trusted USB devices to avoid duplicate
-   ;; `plugdev` group warnings, ensuring compatibility with
-   ;; usbcore.authorized_default=0
-   (udev-rules-service
-    'device-authorization
-    (udev-rule
-     "99-device-authorize.rules"
-     (string-append
-      ;; FIDO2/U2F Devices
-      "SUBSYSTEM==\"hidraw\", "
-      "KERNEL==\"hidraw*\", "
-      "ATTRS{idVendor}==\"1050\", " ; Yubico
-      "MODE=\"0660\", "
-      "GROUP=\"plugdev\"\n"
-      "SUBSYSTEM==\"hidraw\", "
-      "KERNEL==\"hidraw*\", "
-      "ATTRS{idVendor}==\"2c97\", " ; Nitrokey
-      "MODE=\"0660\", "
-      "GROUP=\"plugdev\"\n"
-      "SUBSYSTEM==\"hidraw\", "
-      "KERNEL==\"hidraw*\", "
-      "ATTRS{idVendor}==\"096e\", " ; Feitian FIDO2/U2F
-      "MODE=\"0660\", "
-      "GROUP=\"plugdev\"\n"        
-      ;; SINO WEALTH Gaming Keyboard
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"258a\", "
-      "ATTRS{idProduct}==\"002a\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; Logitech USB Keyboard
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"046d\", "
-      "ATTRS{idProduct}==\"c34b\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; Cambridge Silicon Radio Bluetooth Dongle
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"0a12\", "
-      "ATTRS{idProduct}==\"0001\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; Logitech Wireless Receiver
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"046d\", "
-      "ATTRS{idProduct}==\"c542\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; Logitech Mouse
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"046d\", "
-      "ATTRS{idProduct}==\"c077\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; Generalplus Technology Inc. GENERAL WEBCAM
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"1b3f\", "
-      "ATTRS{idProduct}==\"2247\", "
-      "ATTR{authorized}=\"1\"\n"
-      ;; SanDisk 3.2Gen1 USB Storage
-      "SUBSYSTEM==\"usb\", "
-      "ATTRS{idVendor}==\"0781\", "
-      "ATTRS{idProduct}==\"55a9\", "
-      "ATTR{authorized}=\"1\"\n"))
-    #:groups '("plugdev"))
-
+(udev-rules-service
+ 'device-authorization
+ (udev-rule
+   "99-device-authorize.rules"
+   (string-append
+     "SUBSYSTEM==\"usb\", ATTR{authorized}=\"1\"\n"))
+ #:groups '("plugdev"))
    ;; NFTables Firewall
    ;; Implements a strict firewall with input and output filtering, allowing loopback,
    ;; established connections, Mullvad VPN (UDP port 51820), Tor (local-only),
@@ -778,7 +743,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADIP } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $MULLVADVPN } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -803,14 +768,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADIP } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $MULLVADVPN } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, $MULLVADIP } accept comment \"Local networks\"
+        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
