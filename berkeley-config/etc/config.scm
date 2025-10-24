@@ -920,4 +920,3 @@ SafeLogging 1
      (device (uuid "9d009d01-d635-4d56-987a-ffc2699da9fb" 'ext4))
      (type "ext4"))
     %base-file-systems)))
-

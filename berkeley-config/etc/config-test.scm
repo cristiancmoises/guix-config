@@ -218,21 +218,16 @@
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
 
-;(define-public securityops
-;  (package
-;    (inherit linux)
-;    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
-;    (version "n.n")       ; 
 (define-public securityops
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.17")
+    (version "6.18") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.4.tar.xz")
+              (uri "https://git.kernel.org/torvalds/t/linux-6.18-rc2.tar.gz") ; I INSTALL THIS KERNEL AND NOW THE 3I-ATLAS ARE COMING TO EARTH JUST TO MEET THIS OS!
               (sha256
-               (base32 "1nwi0hzikziwkxm9xzf819wb3lsz93i1ns1nzybpbfkgdqli42h1"))))
+               (base32 "0kpf7kzr5g0z6sszw2kbwj8k4gvk5zrw9mjskwx7p8vvfn7nl2zx"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -743,7 +738,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADVPN } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $GANGSTAPARADISE } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -768,14 +763,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADVPN } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $GANGSTAPARADISE } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept comment \"Local networks\"
+        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16  } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
@@ -920,3 +915,4 @@ SafeLogging 1
      (device (uuid "9d009d01-d635-4d56-987a-ffc2699da9fb" 'ext4))
      (type "ext4"))
     %base-file-systems)))
+

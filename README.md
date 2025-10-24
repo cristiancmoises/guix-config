@@ -9,18 +9,18 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 - 🧠 **AMD Ryzen 3 2200G** — 4 cores / 4 threads for balanced desktop and development performance  
 - 🎮 **Radeon RX 5600/5700 Series** — discrete GPU acceleration for gaming, rendering, and compute tasks  
 - 🌐 **Privacy‑first networking** — seamless integration with Mullvad VPN (WireGuard) and Tor for anonymous, encrypted traffic  
-- 🖼️ **Xmonad** tiling window manager — keyboard‑driven workflow with Rofi for fast application launching  
+- 🖼️  **Xmonad** tiling window manager — keyboard‑driven workflow with Rofi for fast application launching  
 - 🎥 **Multimedia acceleration** — MPV and VLC configured for hardware‑assisted decoding and smooth playback  
 - 🎮 **Gaming‑ready** — Steam and Proton support for native and Windows titles  
 - 🌍 **Full Japanese input** — Fcitx5 IME with extensive font coverage (Iosevka, Noto) for multilingual environments  
 - 🐳 **Containerization & virtualization** — Docker for isolated workloads and QEMU for virtual machine hosting  
 - 🔒 **Hardened SecurityOps kernel** — custom build with [KSPP‑recommended](https://kspp.github.io/Recommended_Settings.html) self‑protection settings, Xanmod and Clear Linux improvements and additional hardened boot arguments
-
+- 🚀 **Latest Linux Kernel** - Latest stable kernel and the mainline kernel(for tests).
 
 With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [Linux kernel**](https://www.kernel.org/), and a curated set of packages and services, this setup balances **performance**, **security**, and **aesthetics** for gaming (Steam), privacy (Mullvad VPN, Tor), development workflows, and Japanese input support.
 
 **Maintainer**: Cristian Cezar Moisés  
-**Last Updated**: September 10, 2025
+**Last Updated**: October 23, 2025
 
 <p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/amazingxlibre.png" width="820" height="460"></p>
 
@@ -29,7 +29,7 @@ With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [
 This GNU Guix configuration delivers a privacy-first, high-performance system optimized for an AMD Ryzen 3 2200G and Radeon RX 5600/5700 Series GPU. Powered by the securityops kernel, it includes AMD-specific tuning, 4GB zswap with zstd compression, and BBR networking for efficiency. Xmonad, paired with Rofi and Xmobar, provides a lightweight tiling desktop. Mullvad VPN and Tor ensure secure, anonymous networking, enforced by a strict NFTables firewall. Japanese input via Fcitx5 with Anthy and extensive fonts (Iosevka, Noto) enhance usability. The system supports gaming (Steam, Proton), torrenting (qBittorrent), multimedia (MPV, VLC), and development (GCC, Rust, Emacs). Docker and QEMU enable containerization and virtualization, though Libvirt is temporarily disabled due to a derivation error. Custom channels ([small-guix](https://codeberg.org/fishinthecalculator/small-guix.git), [ajattix](https://git.ajattix.org/hashirama/ajattix.git), [radix](https://codeberg.org/anemofilia/radix.git)) add flexibility, with detailed comments ensuring maintainability.
 
 - [Key Features](#key-features) - Privacy, security, performance, and more
-- [Security Ops Kernel](#securityops-kernel) - Hardened Linux Kernel for Self-Protection
+- [Security Ops Kernel](#securityops-kernel) - Hardened (Latest) Linux Kernel for Self-Protection
 - [Kernel Arguments](#kernel-arguments) - Installation instructions
 - [Package Highlights](#package-highlights) - Key software packages
 - [Services](#services) - Services
@@ -499,4 +499,4 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
 
 This configuration is licensed under the **GNU General Public License v3.0**. Forked components (e.g., MPV shaders, Cmus themes) retain their respective licenses.
 
-*Last Updated: September 10, 2025*
+*Last Updated: October 23, 2025*
