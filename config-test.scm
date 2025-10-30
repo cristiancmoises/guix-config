@@ -225,9 +225,9 @@
     (version "6.18") 
     (source (origin
               (method url-fetch)
-              (uri "https://git.kernel.org/torvalds/t/linux-6.18-rc2.tar.gz") ; I INSTALL THIS KERNEL AND NOW THE 3I-ATLAS ARE COMING TO EARTH JUST TO MEET THIS OS!
+              (uri "https://git.kernel.org/torvalds/t/linux-6.18-rc3.tar.gz") ; ALIENS ARE COMING!
               (sha256
-               (base32 "0kpf7kzr5g0z6sszw2kbwj8k4gvk5zrw9mjskwx7p8vvfn7nl2zx"))))
+               (base32 "030p9a36ysffflby0l3y974613b6r8445n1qjb2qjqhrgs9mhkmp"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -462,13 +462,7 @@ EndSection"
      (comment "berkeley")
      (group "users")
      (home-directory "/home/berkeley")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")))
-   (user-account
-     (name "leticia")
-     (comment "Letícia")
-     (group "users")
-     (home-directory "/home/leticia")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")) )
+     (supplementary-groups '("wheel" "input" "kvm" "netdev" "audio" "video" "plugdev")))
    %base-user-accounts))
 
   
@@ -505,6 +499,7 @@ EndSection"
    vulkan-tools
    vulkan-loader
    linux-firmware
+   openrgb
    )
 
   ;; ===========================
@@ -651,6 +646,39 @@ EndSection"
    wireplumber
    )
 
+  ;; =========================
+  ;; Fonts
+  ;; =========================
+  (list
+   font-iosevka-term
+   font-iosevka-term-slab
+   font-iosevka-slab
+   font-iosevka-etoile
+   font-iosevka-curly
+   font-iosevka-curly-slab
+   font-iosevka-aile
+   font-iosevka-ss01
+   font-iosevka-ss02
+   font-iosevka-ss03
+   font-iosevka-ss04
+   font-iosevka-ss05
+   font-iosevka-ss06
+   font-iosevka-ss07
+   font-iosevka-ss08
+   font-iosevka-ss09
+   font-iosevka-ss10
+   font-iosevka-ss11
+   font-iosevka-ss12
+   font-iosevka-ss13
+   font-iosevka-ss14
+   font-iosevka-ss15
+   font-iosevka-ss16
+   font-iosevka-ss17
+   font-iosevka-ss18
+   font-sarasa-gothic
+   font-aporetic
+   font-adwaita
+)
   ;; ===========================
   ;; Base packages (Guix essentials)
   ;; ===========================
@@ -738,7 +766,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $GANGSTAPARADISE } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $n.n } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -763,14 +791,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $GANGSTAPARADISE } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $n.n } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16  } accept comment \"Local networks\"
+        ip daddr { $n.n } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
