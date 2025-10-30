@@ -1,0 +1,104 @@
+## =======================================================================
+##  securityops.defconfig
+##  Custom Linux Kernel configuration for:
+##    - AMD Ryzen 2200G APU (Raven Ridge, Zen1 cores)
+##    - Radeon RX 5600/5700 series GPU (Navi 10)
+##
+##  Design Goals:
+##    • Security Hardening (KSPP + Clear Linux–style flags)
+##    • High Performance (XanMod tuning + HZ=1000 + voluntary preempt)
+##    • Minimal Drivers (only required for this hardware generation)
+##    • Legacy initrd model (firmware only from linux-firmware package)
+##
+##  Philosophy:
+##    SecurityOPS kernel merges **security-first design** with
+##    **practical performance optimizations**. It is not bloated
+##    with unnecessary drivers, yet remains compatible with
+##    modern AMD hardware, virtualization, and daily workloads.
+## =======================================================================
+
+# ─── Base Architecture ────────────────────────────────────────────────
+CONFIG_64BIT=y                 # 64-bit kernel
+CONFIG_X86_64=y                # AMD64 support
+CONFIG_HIGH_RES_TIMERS=y       # nanosecond precision timers
+CONFIG_HZ_1000=y               # 1000Hz tick rate → lower latency
+CONFIG_PREEMPT_VOLUNTARY=y     # responsive desktop + stable server balance
+
+# ─── CPU / Scheduler / Security ───────────────────────────────────────
+CONFIG_HARDENED_USERCOPY=y     # mitigate kernel stack overflows
+CONFIG_DEBUG_RODATA=y          # .rodata marked read-only
+CONFIG_STRICT_DEVMEM=y         # prevent /dev/mem exploitation
+CONFIG_STRICT_KERNEL_RWX=y     # enforce W^X (no writable + executable)
+CONFIG_UBSAN_ALIGNMENT=y       # catch undefined memory behavior
+CONFIG_STACKPROTECTOR_STRONG=y # canary-based stack overflow protection
+CONFIG_CC_STACKPROTECTOR_REGULAR=y
+CONFIG_DEBUG_KERNEL=y          # useful for debugging hard crashes
+CONFIG_DEBUG_INFO=y            # keep symbols for crash reports
+
+# ─── Memory / VM ──────────────────────────────────────────────────────
+CONFIG_ZSWAP=y                 # compressed swap cache
+CONFIG_ZSWAP_COMPRESSOR=zstd   # fast + efficient compression
+CONFIG_ZRAM=y                  # in-memory compressed block device
+CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd
+CONFIG_ZRAM_WRITEBACK=y        # zram pages can spill to swap if needed
+
+# ─── Filesystems ──────────────────────────────────────────────────────
+CONFIG_EXT4_FS=y               # default Linux FS
+CONFIG_BTRFS_FS=y              # snapshots, integrity
+CONFIG_F2FS_FS=y               # optimized for SSD
+CONFIG_XFS_FS=y                # scalable FS for large disks
+CONFIG_FUSE_FS=y               # userland FS support (SSHFS, etc.)
+
+# ─── AMDGPU / DRM / Video ─────────────────────────────────────────────
+CONFIG_DRM=y                   # Direct Rendering Manager
+CONFIG_DRM_AMDGPU=y            # modern AMD GPU driver
+CONFIG_DRM_KMS_HELPER=y
+CONFIG_DRM_TTM=y               # GPU memory management
+CONFIG_DRM_VRAM_HELPER=y
+CONFIG_DRM_AMDKFD=y            # HSA compute offloading
+CONFIG_AMDKFD_KCQ=y
+CONFIG_HSA_AMD=y
+CONFIG_DRM_VCN=y               # modern video codec engine (decode/encode)
+CONFIG_DRM_VCE=y               # legacy video codec
+CONFIG_DRM_UVD=y               # legacy video decode
+
+# ─── Storage ──────────────────────────────────────────────────────────
+CONFIG_ATA=y                   # ATA/SATA support
+CONFIG_AHCI=y                  # AHCI controller (SATA)
+CONFIG_SCSI=y                  # SCSI layer (needed by SATA/NVMe/USB)
+CONFIG_USB_UAS=y               # USB attached SCSI
+CONFIG_USB_STORAGE=y           # legacy USB mass storage
+CONFIG_NVME_CORE=y             # NVMe base
+CONFIG_NVME=y                  # NVMe storage devices
+
+# ─── USB / HID ────────────────────────────────────────────────────────
+CONFIG_USB=y
+CONFIG_USB_XHCI_HCD=y          # USB 3.0+ host controller
+CONFIG_USB_EHCI_HCD=y          # USB 2.0 host controller
+CONFIG_USB_HID=y               # USB keyboards/mice
+CONFIG_USB_COMMON=y
+CONFIG_USB_UVC=y               # USB webcams (UVC)
+
+# ─── Networking ───────────────────────────────────────────────────────
+CONFIG_NETFILTER=y             # base netfilter (iptables/nftables)
+CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+CONFIG_NETFILTER_XT_MATCH_STATE=y
+CONFIG_BRIDGE_NETFILTER=y      # filtering on bridges
+CONFIG_NETFILTER_ADVANCED=y    # full netfilter functionality
+
+# ─── Other Hardware ──────────────────────────────────────────────────
+CONFIG_DRM_VESA=y              # fallback framebuffer
+CONFIG_HID_GENERIC=y
+CONFIG_HID=y                   # input devices
+CONFIG_INPUT=y
+CONFIG_MFD_CORE=y
+CONFIG_I2C=y                   # I²C bus
+CONFIG_SPI=y                   # SPI bus
+
+# ─── Misc / Virtualization ───────────────────────────────────────────
+CONFIG_WATCHDOG=y              # watchdog timer for recovery
+CONFIG_VIRTIO=y                # paravirtualization framework
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_BLK=y            # virtio block devices
+CONFIG_VIRTIO_NET=y            # virtio network devices
+CONFIG_VIRTIO_PCI_LEGACY=y     # legacy virtio PCI support
