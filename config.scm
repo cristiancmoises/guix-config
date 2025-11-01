@@ -47,6 +47,7 @@
  (xlibre)
  (guix gexp)
  (gnu packages shells)
+ (gnu packages apparmor)
  (guix build-system linux-module)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
@@ -218,11 +219,6 @@
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
 
-;(define-public securityops
-;  (package
-;    (inherit linux)
-;    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
-;    (version "n.n")       ; 
 (define-public securityops
   (package
     (inherit linux)
@@ -421,9 +417,9 @@ EndSection"
      ;"amdgpu.gpu_recovery=1"          ; GPU recovery
      ;"amdgpu.mcbp=1"                  ; Mid-chain bus power
      ;"amdgpu.dcfeaturemask=0xffffffff" ; All Display Core features
-     ;"amdgpu.sched_policy=2"          ; High-priority scheduling
-     ;"amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-     ;"amdgpu.backlight=0"             ; Disable backlight control
+     "amdgpu.sched_policy=2"          ; High-priority scheduling
+     "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
+     "amdgpu.backlight=0"             ; Disable backlight control
      ;"amdgpu.runpm=1"                 ; Enable runtime power management
      "h264_amf=1"                     ; H.264 encoding
      ;; ─── Power and Performance ──────────────────────────────────────
@@ -434,6 +430,9 @@ EndSection"
      ;; ─── IOMMU and Virtualization ───────────────────────────────────
      "amd_iommu=on"                   ; Enable AMD IOMMU
      "iommu=pt"                       ; Passthrough mode
+     ;; ---- SELINUX ----------------------------------------------------
+     "apparmor=1"
+     "security=apparmor"
      ;; ─── System Behavior ────────────────────────────────────────────
      "noirqdebug"                     ; Disable IRQ debugging
      "watchdog"                       ; Hardware watchdog
@@ -467,13 +466,7 @@ EndSection"
      (comment "berkeley")
      (group "users")
      (home-directory "/home/berkeley")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")))
-   (user-account
-     (name "leticia")
-     (comment "Letícia")
-     (group "users")
-     (home-directory "/home/leticia")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")) )
+     (supplementary-groups '("wheel" "input" "docker" "kvm" "netdev" "audio" "video" "plugdev")))
    %base-user-accounts))
 
   
@@ -510,6 +503,7 @@ EndSection"
    vulkan-tools
    vulkan-loader
    linux-firmware
+   openrgb
    )
 
   ;; ===========================
@@ -588,6 +582,7 @@ EndSection"
   ;; Security / VPN / Cryptography
   ;; ===========================
   (list
+   apparmor
    acct
    ansible
    audit
@@ -656,6 +651,39 @@ EndSection"
    wireplumber
    )
 
+  ;; =========================
+  ;; Fonts
+  ;; =========================
+  (list
+   font-iosevka-term
+   font-iosevka-term-slab
+   font-iosevka-slab
+   font-iosevka-etoile
+   font-iosevka-curly
+   font-iosevka-curly-slab
+   font-iosevka-aile
+   font-iosevka-ss01
+   font-iosevka-ss02
+   font-iosevka-ss03
+   font-iosevka-ss04
+   font-iosevka-ss05
+   font-iosevka-ss06
+   font-iosevka-ss07
+   font-iosevka-ss08
+   font-iosevka-ss09
+   font-iosevka-ss10
+   font-iosevka-ss11
+   font-iosevka-ss12
+   font-iosevka-ss13
+   font-iosevka-ss14
+   font-iosevka-ss15
+   font-iosevka-ss16
+   font-iosevka-ss17
+   font-iosevka-ss18
+   font-sarasa-gothic
+   font-aporetic
+   font-adwaita
+)
   ;; ===========================
   ;; Base packages (Guix essentials)
   ;; ===========================
@@ -743,7 +771,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADVPN } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $MULLVADIP } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -768,7 +796,7 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADVPN } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $MULLVADIP } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
@@ -819,7 +847,7 @@ table inet filter {
    ;; Nix Service
    ;; Integrates Nix package manager for reproducible package environments
    (service nix-service-type)
-   
+
    ;; Tor Service
    ;; Configured for transparent proxying with TransPort and DNSPort 
    (service tor-service-type
@@ -920,3 +948,4 @@ SafeLogging 1
      (device (uuid "9d009d01-d635-4d56-987a-ffc2699da9fb" 'ext4))
      (type "ext4"))
     %base-file-systems)))
+

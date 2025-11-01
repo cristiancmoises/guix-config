@@ -20,7 +20,7 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [Linux kernel**](https://www.kernel.org/), and a curated set of packages and services, this setup balances **performance**, **security**, and **aesthetics** for gaming (Steam), privacy (Mullvad VPN, Tor), development workflows, and Japanese input support.
 
 **Maintainer**: Cristian Cezar Moisés  
-**Last Updated**: October 23, 2025
+**Last Updated**: November 01, 2025
 
 <p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/amazingxlibre.png" width="820" height="460"></p>
 
@@ -499,4 +499,4 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
 
 This configuration is licensed under the **GNU General Public License v3.0**. Forked components (e.g., MPV shaders, Cmus themes) retain their respective licenses.
 
-*Last Updated: October 23, 2025*
+*Last Updated: November 01, 2025*

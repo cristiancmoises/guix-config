@@ -47,6 +47,7 @@
  (xlibre)
  (guix gexp)
  (gnu packages shells)
+ (gnu packages apparmor)
  (guix build-system linux-module)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
@@ -416,9 +417,9 @@ EndSection"
      ;"amdgpu.gpu_recovery=1"          ; GPU recovery
      ;"amdgpu.mcbp=1"                  ; Mid-chain bus power
      ;"amdgpu.dcfeaturemask=0xffffffff" ; All Display Core features
-     ;"amdgpu.sched_policy=2"          ; High-priority scheduling
-     ;"amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-     ;"amdgpu.backlight=0"             ; Disable backlight control
+     "amdgpu.sched_policy=2"          ; High-priority scheduling
+     "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
+     "amdgpu.backlight=0"             ; Disable backlight control
      ;"amdgpu.runpm=1"                 ; Enable runtime power management
      "h264_amf=1"                     ; H.264 encoding
      ;; ─── Power and Performance ──────────────────────────────────────
@@ -429,6 +430,9 @@ EndSection"
      ;; ─── IOMMU and Virtualization ───────────────────────────────────
      "amd_iommu=on"                   ; Enable AMD IOMMU
      "iommu=pt"                       ; Passthrough mode
+     ;; ---- SELINUX ----------------------------------------------------
+     "apparmor=1"
+     "security=apparmor"
      ;; ─── System Behavior ────────────────────────────────────────────
      "noirqdebug"                     ; Disable IRQ debugging
      "watchdog"                       ; Hardware watchdog
@@ -462,7 +466,7 @@ EndSection"
      (comment "berkeley")
      (group "users")
      (home-directory "/home/berkeley")
-     (supplementary-groups '("wheel" "input" "kvm" "netdev" "audio" "video" "plugdev")))
+     (supplementary-groups '("wheel" "input" "docker" "kvm" "netdev" "audio" "video" "plugdev")))
    %base-user-accounts))
 
   
@@ -578,6 +582,7 @@ EndSection"
   ;; Security / VPN / Cryptography
   ;; ===========================
   (list
+   apparmor
    acct
    ansible
    audit
@@ -766,7 +771,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $n.n } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr { $MULLVADIP } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -791,14 +796,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $n.n } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr { $MULLVADIP } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { $n.n } accept comment \"Local networks\"
+        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
@@ -842,7 +847,7 @@ table inet filter {
    ;; Nix Service
    ;; Integrates Nix package manager for reproducible package environments
    (service nix-service-type)
-   
+
    ;; Tor Service
    ;; Configured for transparent proxying with TransPort and DNSPort 
    (service tor-service-type
