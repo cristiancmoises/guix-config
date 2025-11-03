@@ -1,3 +1,6 @@
+  GNU nano 8.6                                                                               channels.scm                                                                                         
+(use-modules (guix ci))
+(list
  (channel
     (name 'debdistutils)
     (url "https://gitlab.com/debdistutils/guix/mirror.git")
