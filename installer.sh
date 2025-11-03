@@ -3,12 +3,12 @@
 
 # Display banner
 echo "+-------------------------------------------------------------+"
-echo "|                  GNU GUIX INSTALLATION                                  |"
-echo "|                      [  In Code We Trust  ]                                         |"
+echo "|                  GNU GUIX INSTALLATION                      |"
+echo "|                 [  In Code We Trust  ]                      |"
 echo "+-------------------------------------------------------------+"
 echo ""
 
-CONFIG_FILE="/mnt/config.scm"
+CONFIG_FILE="/mnt/etc/config.scm"
 
 # Ensure the file exists
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -51,7 +51,7 @@ chmod +w /mnt/etc/channels.scm
 # Reconfigure system
 echo "[+] Reconfiguring system with Guix..."
 sudo guix system reconfigure /mnt/etc/config.scm
-
+  
 # Reboot
 echo "[+] Rebooting system now..."
 reboot
