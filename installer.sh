@@ -1,6 +1,6 @@
 #!/bin/bash
 #=============================================================
-#  GNU Guix Installation Script
+#  GNU Guix Post-Install Setup Script (Parentheses-Fixed)
 #=============================================================
 
 echo "+-------------------------------------------------------------+"
@@ -22,21 +22,28 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 #-------------------------------------------------------------
-# Add (nongnu packages linux) and (nongnu packages firmware)
-# safely under (use-modules (gnu ...))
+# Fix malformed (use-modules (gnu)) → (use-modules (gnu)
+#-------------------------------------------------------------
+echo "[+] Fixing malformed (use-modules (gnu)) entries ..."
+sed -i 's/(use-modules *(gnu))/(use-modules (gnu)/g' "$CONFIG_FILE"
+
+#-------------------------------------------------------------
+# Add (nongnu packages linux)) and (nongnu packages firmware))
+# under (use-modules (gnu)
 #-------------------------------------------------------------
 echo "[+] Ensuring (nongnu packages ...) entries exist..."
 
-if ! grep -q "(nongnu packages linux)" "$CONFIG_FILE"; then
+if ! grep -q "(nongnu packages linux))" "$CONFIG_FILE"; then
     sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)' "$CONFIG_FILE"
 fi
 
-if ! grep -q "(nongnu packages firmware)" "$CONFIG_FILE"; then
-    sed -i '/(use-modules *(gnu)/a\  (nongnu packages firmware)' "$CONFIG_FILE"
+if ! grep -q "(nongnu packages firmware))" "$CONFIG_FILE"; then
+    sed -i '/(use-modules *(gnu)/a\  (nongnu packages firmware))' "$CONFIG_FILE"
 fi
 
 #-------------------------------------------------------------
-# Add kernel and firmware under (operating-system ...)
+# Add (kernel linux) and (firmware (list linux-firmware))
+# under (operating-system
 #-------------------------------------------------------------
 echo "[+] Ensuring kernel and firmware definitions exist..."
 
