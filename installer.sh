@@ -1,81 +1,58 @@
 #!/bin/bash
 #=============================================================
-#  GNU Guix Installation Script
-#  [  In Code We Trust  ]
+#  GNU Guix Installation Script 
 #=============================================================
 
 echo "+-------------------------------------------------------------+"
-echo "|                  GNU GUIX INSTALLATION                      |"
+echo "|                  GNU GUIX CONFIGURATION                     |"
 echo "|                 [  In Code We Trust  ]                      |"
 echo "+-------------------------------------------------------------+"
 echo ""
 
 CONFIG_FILE="/mnt/etc/config.scm"
 CHANNELS_URL="https://codeberg.org/berkeley/guix-config/raw/branch/main/based-channels.scm"
+CHANNELS_FILE="/mnt/etc/channels.scm"
 
 #-------------------------------------------------------------
 # Ensure config file exists
 #-------------------------------------------------------------
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "[-] Error: $CONFIG_FILE does not exist."
+    echo "[-] Error: $CONFIG_FILE not found!"
     exit 1
 fi
 
 #-------------------------------------------------------------
-# Insert (nongnu packages linux) and (nongnu packages firmware)
-# into (use-modules ...)
+# Add (nongnu packages linux) and (nongnu packages firmware)
+# under (use-modules (gnu)
 #-------------------------------------------------------------
-echo "[+] Adding (nongnu packages linux) and (nongnu packages firmware) to (use-modules ...) ..."
-sed -i '/(use-modules[[:space:]]*(gnu)/ {
-    /nongnu packages linux/! s/))/ (nongnu packages linux))/
-}' "$CONFIG_FILE"
-
-sed -i '/(use-modules[[:space:]]*(gnu)/ {
-    /nongnu packages firmware/! s/))/ (nongnu packages firmware))/
-}' "$CONFIG_FILE"
+echo "[+] Adding non-GNU modules to (use-modules ...)"
+sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)\n  (nongnu packages firmware)' "$CONFIG_FILE"
 
 #-------------------------------------------------------------
-# Insert kernel and firmware entries inside (operating-system ...)
+# Add kernel and firmware definitions under (operating-system
 #-------------------------------------------------------------
-echo "[+] Ensuring kernel and firmware entries exist in (operating-system ...) ..."
-sed -i '/(operating-system/,/)/ {
-    /kernel linux/! s/))/ (kernel linux))/
-}' "$CONFIG_FILE"
-
-sed -i '/(operating-system/,/)/ {
-    /firmware (list linux-firmware)/! s/))/ (firmware (list linux-firmware)))/ 
-}' "$CONFIG_FILE"
-
-#-------------------------------------------------------------
-# Start cow-store
-#-------------------------------------------------------------
-echo "[+] Starting cow-store service ..."
-if ! herd start cow-store /mnt; then
-    echo "[-] Warning: failed to start cow-store (might already be running)."
-fi
+echo "[+] Adding kernel and firmware definitions to (operating-system ...)"
+sed -i '/(operating-system/a\  (kernel linux)\n  (firmware (list linux-firmware))' "$CONFIG_FILE"
 
 #-------------------------------------------------------------
 # Download channels.scm
 #-------------------------------------------------------------
 echo "[+] Downloading channels.scm ..."
-if wget -q "$CHANNELS_URL" -O /mnt/etc/channels.scm; then
-    chmod +w /mnt/etc/channels.scm
-    echo "[✓] channels.scm downloaded successfully."
-else
-    echo "[-] Failed to download channels.scm!"
+wget -q "$CHANNELS_URL" -O "$CHANNELS_FILE"
+
+if [ ! -f "$CHANNELS_FILE" ]; then
+    echo "[-] Download failed!"
     exit 1
 fi
 
+chmod +w "$CHANNELS_FILE"
+echo "[✓] channels.scm downloaded and permissions set."
+
 #-------------------------------------------------------------
-# Reconfigure the system
+# Reconfigure system
 #-------------------------------------------------------------
 echo "[+] Reconfiguring system with Guix ..."
-if sudo guix system reconfigure /mnt/etc/config.scm; then
-    echo "[✓] System reconfiguration completed successfully."
-else
-    echo "[-] Guix system reconfigure failed!"
-    exit 1
-fi
+sudo guix system reconfigure "$CONFIG_FILE"
 
 #-------------------------------------------------------------
 # Reboot
