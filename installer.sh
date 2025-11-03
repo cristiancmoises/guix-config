@@ -1,6 +1,6 @@
 #!/bin/bash
 #=============================================================
-#  GNU Guix Post-Install Setup Script (Parentheses-Fixed)
+#  GNU Guix Installation Script
 #=============================================================
 
 echo "+-------------------------------------------------------------+"
@@ -22,18 +22,15 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 #-------------------------------------------------------------
-# Fix malformed (use-modules (gnu)) → (use-modules (gnu)
-#-------------------------------------------------------------
 echo "[+] Fixing malformed (use-modules (gnu)) entries ..."
 sed -i 's/(use-modules *(gnu))/(use-modules (gnu)/g' "$CONFIG_FILE"
 
 #-------------------------------------------------------------
-# Add (nongnu packages linux)) and (nongnu packages firmware))
-# under (use-modules (gnu)
+# Add (nongnu packages linux) and (nongnu packages firmware)
 #-------------------------------------------------------------
 echo "[+] Ensuring (nongnu packages ...) entries exist..."
 
-if ! grep -q "(nongnu packages linux))" "$CONFIG_FILE"; then
+if ! grep -q "(nongnu packages linux)" "$CONFIG_FILE"; then
     sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)' "$CONFIG_FILE"
 fi
 
@@ -42,8 +39,7 @@ if ! grep -q "(nongnu packages firmware))" "$CONFIG_FILE"; then
 fi
 
 #-------------------------------------------------------------
-# Add (kernel linux) and (firmware (list linux-firmware))
-# under (operating-system
+# Add (kernel linux) and (firmware (list linux-firmware)
 #-------------------------------------------------------------
 echo "[+] Ensuring kernel and firmware definitions exist..."
 
