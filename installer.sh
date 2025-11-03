@@ -1,6 +1,6 @@
 #!/bin/bash
 #=============================================================
-#  GNU Guix Installation Script 
+#  GNU Guix Installation Script
 #=============================================================
 
 echo "+-------------------------------------------------------------+"
@@ -23,16 +23,30 @@ fi
 
 #-------------------------------------------------------------
 # Add (nongnu packages linux) and (nongnu packages firmware)
-# under (use-modules (gnu)
+# safely under (use-modules (gnu ...))
 #-------------------------------------------------------------
-echo "[+] Adding non-GNU modules to (use-modules ...)"
-sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)\n  (nongnu packages firmware)' "$CONFIG_FILE"
+echo "[+] Ensuring (nongnu packages ...) entries exist..."
+
+if ! grep -q "(nongnu packages linux)" "$CONFIG_FILE"; then
+    sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)' "$CONFIG_FILE"
+fi
+
+if ! grep -q "(nongnu packages firmware)" "$CONFIG_FILE"; then
+    sed -i '/(use-modules *(gnu)/a\  (nongnu packages firmware)' "$CONFIG_FILE"
+fi
 
 #-------------------------------------------------------------
-# Add kernel and firmware definitions under (operating-system
+# Add kernel and firmware under (operating-system ...)
 #-------------------------------------------------------------
-echo "[+] Adding kernel and firmware definitions to (operating-system ...)"
-sed -i '/(operating-system/a\  (kernel linux)\n  (firmware (list linux-firmware))' "$CONFIG_FILE"
+echo "[+] Ensuring kernel and firmware definitions exist..."
+
+if ! grep -q "(kernel linux)" "$CONFIG_FILE"; then
+    sed -i '/(operating-system/a\  (kernel linux)' "$CONFIG_FILE"
+fi
+
+if ! grep -q "(firmware (list linux-firmware))" "$CONFIG_FILE"; then
+    sed -i '/(operating-system/a\  (firmware (list linux-firmware))' "$CONFIG_FILE"
+fi
 
 #-------------------------------------------------------------
 # Download channels.scm
@@ -52,7 +66,10 @@ echo "[✓] channels.scm downloaded and permissions set."
 # Reconfigure system
 #-------------------------------------------------------------
 echo "[+] Reconfiguring system with Guix ..."
-sudo guix system reconfigure "$CONFIG_FILE"
+sudo guix system reconfigure "$CONFIG_FILE" || {
+    echo "[-] guix system reconfigure failed!"
+    exit 1
+}
 
 #-------------------------------------------------------------
 # Reboot
