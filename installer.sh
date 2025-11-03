@@ -42,7 +42,8 @@ herd start cow-store /mnt
 
 # Download and move channels.scm
 echo "[+] Downloading channels.scm..."
-wget https://short.securityops.co/channels -O /mnt/etc/channels.scm
+wget https://codeberg.org/berkeley/guix-config/raw/branch/main/based-channels.scm
+ -O /mnt/etc/channels.scm
 
 # Make it writable
 chmod +w /mnt/etc/channels.scm
