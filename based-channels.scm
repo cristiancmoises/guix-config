@@ -1,4 +1,3 @@
-  GNU nano 8.6                                                                               channels.scm                                                                                         
 (use-modules (guix ci))
 (list
  (channel
