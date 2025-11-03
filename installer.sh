@@ -31,11 +31,11 @@ sed -i 's/(use-modules *(gnu))/(use-modules (gnu)/g' "$CONFIG_FILE"
 echo "[+] Ensuring (nongnu packages ...) entries exist..."
 
 if ! grep -q "(nongnu packages linux)" "$CONFIG_FILE"; then
-    sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux)' "$CONFIG_FILE"
+    sed -i '/(use-modules *(gnu)/a\  (nongnu packages linux))' "$CONFIG_FILE"
 fi
 
 if ! grep -q "(nongnu packages firmware))" "$CONFIG_FILE"; then
-    sed -i '/(use-modules *(gnu)/a\  (nongnu packages firmware))' "$CONFIG_FILE"
+    sed -i '/(use-modules *(gnu)/a\  (nongnu packages firmware)' "$CONFIG_FILE"
 fi
 
 #-------------------------------------------------------------
