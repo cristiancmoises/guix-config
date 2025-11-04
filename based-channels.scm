@@ -1,9 +1,5 @@
 (use-modules (guix ci))
 (list
- (channel
-    (name 'debdistutils)
-    (url "https://gitlab.com/debdistutils/guix/mirror.git")
-    (branch "master"))
      (channel
        (name 'guix-north-america)
        (url "https://git.genenetwork.org/guix-north-america/")
