@@ -45,19 +45,23 @@
  (gnu home services fontutils)
  (gnu packages file-systems)
  (gnu packages libreoffice)
+ (gnu packages ninja)
  (gnu packages w3m)
  (gnu packages textutils)
+ (gnu packages virtualization)
  (gnu packages gimp)
  (gnu packages haskell-xyz)
  (gnu packages xml)
  (gnu packages telegram)
  (gnu packages games)
+ (gnu packages nss)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
  (gnu home-services wm)        ; Window manager home services
  (gnu packages commencement)
  (gnu packages vulkan)
  (gnu packages glib)
+ (gnu packages benchmark)
  (ajatt packages video)
  (ajatt packages audio)
  (gnu home services shells)         ; Shell configuration services
@@ -149,26 +153,13 @@
  (guix gexp)                        ; G-expressions for file handling
  (srfi srfi-26)                     ; SRFI-26 for partial application
  (nongnu packages game-client)      ; Non-GNU game clients
+ (gnu packages chromium)            ; Chromium
  (nongnu packages chrome)           ; Non-GNU Chrome browser
- (saayix packages binaries)        ; Custom binary packages
+ (saayix packages binaries)         ; Custom binary packages
  (saayix packages python-xyz)
- (gnu packages kde)
  (gnu services dbus)
+ (gnu packages fcitx5)
  (gnu home services sound))
-
-(define fontconfig
-  '(fontconfig
-    (comment " Set subpixel arrangement for all fonts ")
-    (match ((target "font")
-            (edit (@ (name "rgba") (mode "assign"))
-                  (const "bgr"))
-            (edit (@ (name "hrgba") (mode "assign"))
-                  (const "bgr"))
-            (edit (@ (name "hinting") (mode "assign"))
-                  (bool "true")))
-      (comment "Iosevka")
-      (alias ((family "sans-serif")
-              (prefer (family "Iosevka")))))))
 
 ;;; Home Environment Configuration
 (home-environment
@@ -201,15 +192,30 @@
    glib
    alsa-lib
    pkg-config 
+   glibc
+   nspr
+   nss
+   alsa-lib
+   libx11
+   libxcomposite
+   libxdamage
+   libxext
+   libxfixes
+   libxrandr
+   libxshmfence
+   libdrm
+   libxkbcommon
+   libxcb
   ;; Programming Languages
    bundler                     ;
    ruby                        ; 
    ruby-json
    gcc
    jekyll
+   phoronix-test-suite
    ghc                         ; Haskell compiler
    cabal-install               ; Haskell package manager
-   ghc-cabal-doctest           ; Haskell doctest support
+   cabal-doctest           ; Haskell doctest support
    go                           ; Go language
    openjdk                      ; Java Development Kit
    python                       ; Python
@@ -274,6 +280,7 @@
    vlc
    steam
    navidrome-bin
+   wmctrl
    )
 
   ;; ===========================
@@ -316,6 +323,11 @@
   ;; Desktop Utilities / Window Management
   ;; ===========================
   (list
+   fcitx5
+   fcitx5-qt
+   ungoogled-chromium
+   desktop-file-utils
+   qemu
    gnome-tweaks
    lxappearance
    flatpak-xdg-utils
@@ -327,6 +339,12 @@
    fastfetch
    bat
    qtbase
+   cool-retro-term
+   qtdeclarative
+   qtsvg
+   qtwebview
+   qttools
+   ninja
    mesa
    qtwayland
    zoxide
@@ -358,6 +376,8 @@
   ;; Security / Privacy (user-level)
   ;; ===========================
   (list
+   wireguard-tools
+   pwgen
    openssl
    firejail
    gnupg
@@ -383,6 +403,12 @@
    emacs
    emacs-nerd-icons
    emacs-telega
+   tdlib
+   emacs-vterm
+   emacs
+   emacs-org 
+   emacs-org-static-blog
+   emacs-magit
    neovim
    gedit
    )
@@ -401,15 +427,16 @@
   ;; ===========================
   (list
  ;; Fonts
+     font-gnu-unifont
+     font-gnu-freefont
      font-dejavu               ; DejaVu font family for general use
      font-adobe-source-code-pro ; Monospace font for coding
      font-adobe-source-han-sans ; CJK font for Chinese, Japanese, Korean
-     font-adobe-source-sans-pro ; Sans-serif font for documents
-     font-adobe-source-serif-pro ; Serif font for documents
+     font-adobe-source-sans ; Sans-serif font for documents
+     font-adobe-source-serif ; Serif font for documents
      font-anonymous-pro        ; Monospace font for programming
      font-anonymous-pro-minus  ; Variant of Anonymous Pro
      font-awesome              ; Icon font for UI elements
-     font-cns11643             ; CJK font for traditional Chinese
      font-cns11643-swjz        ; Simplified Chinese variant of CNS11643
      font-comic-neue           ; Casual comic-style font
      font-culmus               ; Hebrew fonts
@@ -454,7 +481,7 @@
      font-terminus             ; Monospace bitmap font
      font-tex-gyre             ; Professional font family for documents
      font-un                   ; Korean font
-     font-vazir                ; Persian font
+     font-vazirmatn                ; Persian font
      font-wqy-microhei         ; CJK font for Chinese
      font-wqy-zenhei           ; CJK font for Chinese
      font-adobe100dpi          ; Adobe bitmap fonts (100 DPI)
@@ -571,7 +598,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("ss" . "sudo env TERM=xterm su -")
         ("ee" . "exiftool -recursive -all=")
         ("ex" . "exiftool -all= && del *original*")
-        ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://inv.nadeko.net")
+        ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://yt.securityops.co")
         ("enc" . "tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz")
         ("dec" . "openssl enc -d -aes256 -in secured.tar.gz | tar xz")
         ("s" . "sensors")
@@ -618,6 +645,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("tempo" . "curl 'wttr.in/caxias_do_sul?date=next7'")
         ("bun" . "/home/berkeley/.bun/bin/bun")))))
 
+
    ;; XDG MIME Applications
    ;; Configures default applications for file types and protocols
    (service home-xdg-mime-applications-service-type
@@ -629,10 +657,6 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
                 ("nsxiv.desktop" . ("image/avif" "image/bmp" "image/jpeg" "image/png" "image/svg+xml" "image/webp"))
                 ("foliate.desktop" . ("application/epub+zip"))
                 ("sioyek.desktop" . ("application/pdf"))))))
-
-   (simple-service 'font-antialias
-                   home-fontconfig-service-type
-                   (list "~/.local/share/fonts" fontconfig))
 
    ;; Environment Variables
    ;; Sets user-wide environment variables for paths, editors, and input methods
