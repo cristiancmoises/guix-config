@@ -41,7 +41,7 @@ main = xmonad
 myConfig = def
   { modMask = mod4Mask
   , layoutHook = windowArrange myLayout
-  , terminal = "kitty"
+  , terminal = "alacritty"
   , focusedBorderColor = "#000000"
   , manageHook = myManageHook
   , startupHook = do
@@ -50,18 +50,15 @@ myConfig = def
       spawn "xrandr --dpi 192"
       spawn "fish set -gx DRI_PRIME 1"
       spawn "modprobe -r dccp sctp rds tipc"
-      spawn "bash setxkbmap br" -- Fixed: Removed incorrect 'bash' prefix
       spawn "xrandr --output HDMI-A-0 --mode 1920x1080 --rate 60.00"
       spawn "xrdb /home/berkeley/.Xresources"
       spawn "picom --backend glx --vsync -b"
       spawn "tor"
+      spawn "mullvad-vpn"
       spawn "feh --bg-fill /home/berkeley/wallpapers/back.jpg"
-      spawnOn "1" "flatpak run org.wezfurlong.wezterm"
+      spawnOn "1" "kitty"
       spawnOn "2" "zen"
-      spawnOn "3" "bash noise"
-      spawnOn "4" "mullvad-vpn"
-      spawnOn "9" "sleep 2 && pavucontrol"
-      spawnOn "9" "sleep 2 && /home/berkeley/.local/bin/noisetorch"
+      spawnOn "3" "emacs"
       spawn "polybar top-monitor-1" -- Ensure polybar is in Guix profile
       spawn "fcitx5 -d -r" -- Ensure fcitx5 is in Guix profile
   }
@@ -70,7 +67,7 @@ keyBinds :: [(String, X ())]
 keyBinds =
   [ ("M-d", spawn "rofi -show run") -- Changed to spawn and rely on startupHook
   , ("M-0", spawn "kitty")
-  , ("M-i", spawn "qbittorrent")
+  , ("M-i", spawn "scrot")
   , ("M-e", runOrRaise "zen" (className =? "Navigator"))
   , ("M-p", runOrRaise "openshot-qt" (className =? "openshot"))
   , ("M-o", runOrRaise "obs" (className =? "obs"))
@@ -78,18 +75,18 @@ keyBinds =
   , ("M-x", spawn "google-chrome")
   , ("M-S-q", return ())
   , ("M-q", kill)
-  , ("M-n", spawn "bash /files/scripts/emacs.sh")
-  , ("M-g", spawn "bash /files/scripts/browser.sh")
+  , ("M-n", spawn "scrot")
+  , ("M-g", spawn "google-chrome")
   , ("M-m", spawn "flatpak run org.wezfurlong.wezterm")
   , ("M-S-r", spawn "~/.local/bin/run_anki.sh")
-  , ("M-b", spawn "bash /files/scripts/zen.sh")
-  , ("M-a", spawn "/files/scripts/torbrowser.sh")
+  , ("M-b", spawn "scrot")
+  , ("M-a", spawn "scrot")
   , ("M-l", sendToEmptyWorkspace)
   , ("M-t", viewEmptyWorkspace)
-  , ("M-z", spawn "flameshot gui")
+  , ("M-z", spawn "/home/berkeley/.guix-home/profile/bin/flameshot gui")
   , ("M-w", spawn "steam")
   , ("M-v", easySwap)
-  , ("M-j", spawn "/files/scripts/telegram.sh")
+  , ("M-j", spawn "scrot")
   , ("M-k", spawn "/files/scripts/tmp.sh")
   , ("M-ç", spawn "~/.local/bin/noisetorch")
   ]
