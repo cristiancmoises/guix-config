@@ -22,7 +22,7 @@ With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [
 **Maintainer**: Cristian Cezar Moisés  
 **Last Updated**: November 16, 2025
 
-<p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="768"></p>
+<p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="760"></p>
 
 ## 📝 Summary
 
