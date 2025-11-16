@@ -479,10 +479,10 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
 ## 🎞️ Aesthetic & Mood
 
 <p align="center">  
+  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/fastfech.png" width="500">
   <img src="https://i.ibb.co/hgpctz7/1.gif" width="500" height="250">  
   <img src="https://i.ibb.co/VWc1YM5/4.gif" width="500" height="250">  
   <img src="https://i.ibb.co/SnwXjKt/3.gif" width="500" height="250">  
-  <img src="https://i.ibb.co/Yddwt4d/2024-06-26-21-57.png" width="500" height="250">
 </p>
 
 ## 🎥 Guix on YouTube
