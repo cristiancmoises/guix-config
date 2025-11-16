@@ -22,7 +22,7 @@ With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [
 **Maintainer**: Cristian Cezar Moisés  
 **Last Updated**: November 16, 2025
 
-<p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="750"></p>
+<p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="620"></p>
 
 ## 📝 Summary
 
@@ -57,7 +57,6 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/amazingxlibre.png" width="500">  
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/cmus.png" width="500">
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/scream2.png" width="500">
-</p>
 
 ## ✨ Key Features
 
