@@ -1,8 +1,8 @@
 <p align="center">  <img src="https://i.ibb.co/9thQktG/re.png" width="640" height="160" alt="Guix Config Banner"></p>
 
-# 💡 Welcome to the **Guix Config**
+<img src="https://codeberg.org/guix/artwork/raw/branch/master/badges/gnu-guix-reproducible.svg">
 
-> Some files included here are forked from other projects, such as MPV shaders, Simple History, and Cmus themes.
+> Some files included here are forked from other projects, such as MPV shaders, Simple History, Cmus, FFMpeg recorder.
 
 This configuration delivers a **secure**, **high‑performance**, and **minimalist** GNU Guix system for the host **`securityops`**, purpose‑built for modern workloads and hardened against common attack vectors. It is tuned for:
 
