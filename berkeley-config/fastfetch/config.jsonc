@@ -1,0 +1,83 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
+  "logo": {
+    "type": "kitty",
+    "source": "~/wallpapers/sec.png",
+    "padding": {
+      "top": 1,
+      "left": 1,
+      "right": 1,
+      "bottom": 1
+    },
+    "width": 25,
+    "height": 10,
+    "preserveAspectRatio": false
+  },
+
+  "display": {
+    "separator": ": ",
+    "key": {
+      "width": 10
+    },
+    "color": "cyan"
+  },
+
+  "modules": [
+    {
+      "type": "title",
+      "format": "{1}@{2}",
+      "color": {
+        "user": "cyan",
+        "host": "cyan"
+      }
+    },
+    {
+      "type": "os",
+      "key": "OS"
+    },
+   {
+  "type": "command",
+  "key": "Kernel",
+  "text": "uname -a"
+   },
+    {
+      "type": "uptime",
+      "key": "Uptime"
+    },
+    {
+      "type": "cpu",
+      "key": "CPU",
+      "showPeCoreCount": true
+    },
+    {
+      "type": "gpu",
+      "key": "GPU"
+    },
+    {
+      "type": "memory",
+      "key": "Memory"
+    },
+    {
+      "type": "display",
+      "key": "Display"
+    },    
+    {
+  "type": "command",
+  "key": "D.Server",
+  "text": "X -version 2>&1 | grep -m1 ."
+    },
+    {
+      "type": "wm",
+      "key": "WM"
+    },
+    {
+      "type": "terminal",
+      "key": "Terminal"
+    },
+    {
+      "type": "shell",
+      "key": "Shell"
+    }
+  ]
+}
