@@ -54,7 +54,7 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
 
 <p align="center">     
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/scream.png" width="500">  
-  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/xlibre.png" width="500">  
+  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/amazingxlibre.png" width="500">  
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/cmus.png" width="500">
   <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/scream2.png" width="500">
 </p>
