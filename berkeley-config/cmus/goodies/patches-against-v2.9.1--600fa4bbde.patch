@@ -1,0 +1,419 @@
+From ef161207389149e5a51d47a0dec3e985914a893c Mon Sep 17 00:00:00 2001
+From: Tony Fischetti <tony.fischetti@gmail.com>
+Date: Tue, 1 Jun 2021 16:20:34 -0400
+Subject: [PATCH 1/2] tony changes (see changelog)
+
+---
+ TONY-CHANGELOG | 10 ++++++++++
+ command_mode.c |  4 ++--
+ misc.c         | 21 +++------------------
+ misc.h         |  1 +
+ options.c      |  9 +--------
+ 5 files changed, 17 insertions(+), 28 deletions(-)
+ create mode 100644 TONY-CHANGELOG
+
+diff --git a/TONY-CHANGELOG b/TONY-CHANGELOG
+new file mode 100644
+index 0000000000000..9f49fda62e532
+--- /dev/null
++++ b/TONY-CHANGELOG
+@@ -0,0 +1,10 @@
++
++Wed 27 Nov 2019 04:13:09 PM EST
++
++From 354625c
++  - the color schemes are loaded from the `cmus_theme_dir` now
++  - the `cmus_theme_dir` is cmus_config_dir + "/themes"
++  - `cmus_playlist_dir` is always cmus_config_dir + "/playlists"
++  - idk what playlist moving was about but it's gone now
++  - the configuration file is in the config dir now. The whole rc
++  - so, no need to load optional static config
+diff --git a/command_mode.c b/command_mode.c
+index 3d00267a1c65e..6f3f4ce845b3a 100644
+--- a/command_mode.c
++++ b/command_mode.c
+@@ -772,7 +772,7 @@ static void cmd_colorscheme(char *arg)
+ {
+ 	char filename[512];
+ 
+-	snprintf(filename, sizeof(filename), "%s/%s.theme", cmus_config_dir, arg);
++	snprintf(filename, sizeof(filename), "%s/%s.theme", cmus_theme_dir, arg);
+ 	if (source_file(filename) == -1) {
+ 		snprintf(filename, sizeof(filename), "%s/%s.theme", cmus_data_dir, arg);
+ 		if (source_file(filename) == -1)
+@@ -2578,7 +2578,7 @@ static void expand_colorscheme(const char *str)
+ {
+ 	PTR_ARRAY(array);
+ 
+-	load_themes(cmus_config_dir, str, &array);
++	load_themes(cmus_theme_dir, str, &array);
+ 	load_themes(cmus_data_dir, str, &array);
+ 
+ 	if (array.count) {
+diff --git a/misc.c b/misc.c
+index 8d6888c1d6d0e..256b64beb14a0 100644
+--- a/misc.c
++++ b/misc.c
+@@ -37,6 +37,7 @@
+ 
+ const char *cmus_config_dir = NULL;
+ const char *cmus_playlist_dir = NULL;
++const char *cmus_theme_dir = NULL;
+ const char *cmus_socket_path = NULL;
+ const char *cmus_data_dir = NULL;
+ const char *cmus_lib_dir = NULL;
+@@ -199,18 +200,6 @@ const char *get_filename(const char *path)
+ 	return file;
+ }
+ 
+-static void move_old_playlist(void)
+-{
+-	char *default_playlist = xstrjoin(cmus_playlist_dir, "/default");
+-	char *old_playlist = xstrjoin(cmus_config_dir, "/playlist.pl");
+-	int rc = rename(old_playlist, default_playlist);
+-	if (rc && errno != ENOENT)
+-		die_errno("error: unable to move %s to playlist directory",
+-				old_playlist);
+-	free(default_playlist);
+-	free(old_playlist);
+-}
+-
+ int misc_init(void)
+ {
+ 	char *xdg_runtime_dir = get_non_empty_env("XDG_RUNTIME_DIR");
+@@ -244,14 +233,10 @@ int misc_init(void)
+ 	}
+ 	make_dir(cmus_config_dir);
+ 
+-	cmus_playlist_dir = get_non_empty_env("CMUS_PLAYLIST_DIR");
+-	if (!cmus_playlist_dir)
+-		cmus_playlist_dir = xstrjoin(cmus_config_dir, "/playlists");
++	cmus_playlist_dir = xstrjoin(cmus_config_dir, "/playlists");
++	cmus_theme_dir = xstrjoin(cmus_config_dir, "/themes");
+ 
+-	int playlist_dir_is_new = dir_exists(cmus_playlist_dir) == 0;
+ 	make_dir(cmus_playlist_dir);
+-	if (playlist_dir_is_new)
+-		move_old_playlist();
+ 
+ 	cmus_socket_path = get_non_empty_env("CMUS_SOCKET");
+ 	if (cmus_socket_path == NULL) {
+diff --git a/misc.h b/misc.h
+index caccdad7447ba..d5021bd9c423f 100644
+--- a/misc.h
++++ b/misc.h
+@@ -23,6 +23,7 @@
+ 
+ extern const char *cmus_config_dir;
+ extern const char *cmus_playlist_dir;
++extern const char *cmus_theme_dir;
+ extern const char *cmus_socket_path;
+ extern const char *cmus_data_dir;
+ extern const char *cmus_lib_dir;
+diff --git a/options.c b/options.c
+index 592400a4c9b98..84b7a7d37f334 100644
+--- a/options.c
++++ b/options.c
+@@ -1618,7 +1618,7 @@ void options_load(void)
+ 	/* load autosave config */
+ 	snprintf(filename, sizeof(filename), "%s/autosave", cmus_config_dir);
+ 	if (source_file(filename) == -1) {
+-		char *def = xstrjoin(cmus_data_dir, "/rc");
++		char *def = xstrjoin(cmus_config_dir, "/rc");
+ 
+ 		if (errno != ENOENT)
+ 			error_msg("loading %s: %s", filename, strerror(errno));
+@@ -1630,13 +1630,6 @@ void options_load(void)
+ 		free(def);
+ 	}
+ 
+-	/* load optional static config */
+-	snprintf(filename, sizeof(filename), "%s/rc", cmus_config_dir);
+-	if (source_file(filename) == -1) {
+-		if (errno != ENOENT)
+-			error_msg("loading %s: %s", filename, strerror(errno));
+-	}
+-
+ 	/* replace the default format_clipped_text symbol in ascii terminal */
+ 	if (!using_utf8 && strcmp(clipped_text_format, str_defaults[FMT_CLIPPED_TEXT].value) == 0) {
+ 		clipped_text_internal = xstrdup("...");
+-- 
+2.20.1
+
+
+From c51333c1544688fcea3a2a80813b12b21f4337e7 Mon Sep 17 00:00:00 2001
+From: Tony Fischetti <tony.fischetti@gmail.com>
+Date: Tue, 1 Jun 2021 18:10:04 -0400
+Subject: [PATCH 2/2] experimental relative playlist paths patch...
+
+from https://github.com/cmus/cmus/issues/834
+---
+ Doc/cmus.txt |  5 ++++
+ cmus.c       | 58 +++++++++++++++++++++++++++++++++++++++++++++-
+ job.c        | 65 +++++++++++++++++++++++++++++++++++++++++++++++++++-
+ options.c    | 48 ++++++++++++++++++++++++++++++++++++++
+ options.h    |  2 ++
+ 5 files changed, 176 insertions(+), 2 deletions(-)
+
+diff --git a/Doc/cmus.txt b/Doc/cmus.txt
+index 75e6f96447a5f..1fd51c9435f33 100644
+--- a/Doc/cmus.txt
++++ b/Doc/cmus.txt
+@@ -1101,6 +1101,11 @@ mpris (true)
+ output_plugin [roar, pulse, alsa, arts, oss, sndio, sun, coreaudio]
+ 	Name of output plugin.
+ 
++pl_env_vars
++       Comma separated list of environment variables to substitute when saving
++       library/playlist files.
++
++
+ pl_sort () [`Sort Keys`]
+ 	Sort keys for the playlist view (3). Empty value disables sorting and
+ 	enables manually moving tracks.
+diff --git a/cmus.c b/cmus.c
+index 7af211ce46a9a..8493420ce5b07 100644
+--- a/cmus.c
++++ b/cmus.c
+@@ -235,12 +235,68 @@ static int save_playlist_cb(void *data, struct track_info *ti)
+ 	const char nl = '\n';
+ 	int rc;
+ 
+-	rc = write_all(fd, ti->filename, strlen(ti->filename));
++
++	char *ft = NULL;
++	if (pl_env_vars && *pl_env_vars && *ti->filename != '\x1F') {
++		// see handle_line in job.c for more information about how this works
++
++		for (char **v = pl_env_vars; *v; v++) {
++			if (!**v)
++				continue;
++
++			const char *x = getenv(*v);
++			if (!x || !*x)
++				continue;
++			size_t xl = strlen(x);
++
++#ifdef _WIN32
++			// Windows is case-insensitive and doesn't have strncmp,
++			// plus cmus always uses a forward slash for internal
++			// paths.
++			const char *wna = ti->filename;
++			const char *wnb = x;
++			size_t wnn = xl;
++			while (wnn-- && (tolower(*wna) == tolower(*wnb) || (*wna == '/' && *wnb == '\\'))) {
++				if (!wnn || !*wna || !*wnb)
++					break;
++				wna++;
++				wnb++;
++			}
++			if (*wna || *wnb)
++				continue;
++#else
++			if (strncmp(ti->filename, x, xl) != 0)
++				continue;
++#endif
++
++			// Keep the '/' at the beginning of the path, and only
++			// use the env var if it is a dir.
++			if (ti->filename[xl-1] == '/')
++				xl--;
++			if (ti->filename[xl] != '/')
++				continue;
++
++			size_t vl = strlen(*v);
++			char *fc = ft = xnew(char, 1 + vl + 1 + strlen(ti->filename + xl) + 1);
++			*fc++ = '\x1F';
++			strncpy(fc, *v, vl);
++			fc += vl;
++			*fc++ = '\x1F';
++			strcpy(fc, ti->filename + xl);
++		}
++	}
++
++	rc = write_all(fd, ft ? ft : ti->filename, strlen(ft ? ft : ti->filename));
++
++
+ 	if (rc == -1)
+ 		return -1;
+ 	rc = write_all(fd, &nl, 1);
+ 	if (rc == -1)
+ 		return -1;
++
++	free(ft);
++
+ 	return 0;
+ }
+ 
+diff --git a/job.c b/job.c
+index cd32e0b8c90bc..0dbdf15e50b5d 100644
+--- a/job.c
++++ b/job.c
+@@ -346,7 +346,70 @@ static int handle_line(void *data, const char *line)
+ 	if (is_http_url(line) || is_cue_url(line)) {
+ 		add_url(line);
+ 	} else {
+-		char *absolute = path_absolute_cwd(line, data);
++		char *absolute = NULL;
++		if (*line == '\x1F') {
++			// We use \x1F as the variable delimiter since it won't
++			// appear in a filename, it won't show up in the
++			// console, and it won't require changes to be made
++			// elsewhere for the variable handling.
++
++			const char *ve = strchr(line+1, '\x1F');
++			char *v = ve
++				? xstrndup(line+1, ve-line-1)
++				: xstrdup(line+1);
++			ve++;
++
++			// If the env var is not found or is empty, we leave the
++			// filename as-is. Even though this will result in
++			// errors (the path won't exist, and it'll start with
++			// 0x1b), it will allow the env var substitution to be
++			// preserved when saving so the playlist isn't
++			// destroyed.
++
++			// FIXME: this isn't actually true since it'll discard
++			// tracks which aren't found in the cache...
++
++			// TODO: see if there's a way we can preserve the play
++			// count info from the cache (speaking of that, does it
++			// even belong there in the first place?...)
++
++			// ... maybe the solution to both of these is to use
++			// this config option for the cache entries too?
++
++			// Note that when saving, the env var may not be the
++			// same as the original one used when loading since the
++			// substition is based on the pl_env_vars option in
++			// order. This is intentional.
++
++			const char *x = getenv(v);
++			if (x && *x) {
++				// Note that the remaining filename will always
++				// begin with a path separator when saved, just
++				// in case the env var doesn't have its own at
++				// the end.
++
++				char *fc = absolute = xmalloc(strlen(x) + strlen(ve) + 1);
++				for (const char *c = x; *c; c++) {
++#ifdef _WIN32
++					// cmus always uses forward slashes
++					// internally, and Windows accepts
++					// either.
++					if (*c == '\\')
++						*fc++ = '/';
++					else
++#endif
++					*fc++ = *c;
++				}
++				strcpy(fc, ve);
++
++				d_print("substituted filename '%s' => '%s' (%s='%s')\n", line, absolute, v, x);
++			}
++
++			free(v);
++		}
++		if (!absolute)
++			absolute = path_absolute_cwd(line, data);
++
+ 		add_file(absolute, 0);
+ 		free(absolute);
+ 	}
+diff --git a/options.c b/options.c
+index 84b7a7d37f334..d683b10216c8d 100644
+--- a/options.c
++++ b/options.c
+@@ -157,6 +157,7 @@ char *window_title_alt_format = NULL;
+ char *id3_default_charset = NULL;
+ char *icecast_default_charset = NULL;
+ char *lib_add_filter = NULL;
++char **pl_env_vars = NULL;
+ 
+ static void buf_int(char *buf, int val, size_t size)
+ {
+@@ -265,6 +266,7 @@ static const struct {
+ 	{ "pl_sort", "" },
+ 	{ "id3_default_charset", "ISO-8859-1" },
+ 	{ "icecast_default_charset", "ISO-8859-1" },
++	{ "pl_env_vars", "" },
+ 	{ NULL, NULL }
+ };
+ 
+@@ -504,6 +506,51 @@ static void set_tree_width_max(void *data, const char *buf)
+ 	update_size();
+ }
+ 
++static void get_pl_env_vars(void *data, char *buf, size_t size)
++{
++	if (!pl_env_vars) {
++		strscpy(buf, "", size);
++		return;
++	}
++	char *p = buf;
++	size_t r = size - 1;
++	for (char **x = pl_env_vars; *x; x++) {
++		if (x != pl_env_vars) {
++			if (!--r)
++				return;
++			*p++ = ',';
++		}
++		size_t l = strlen(*x);
++		if (!(r -= l))
++			return;
++		strcpy(p, *x);
++		p += l;
++	}
++	*p = '\0';
++}
++
++static void set_pl_env_vars(void *data, const char *buf)
++{
++	if (pl_env_vars) {
++		free(*pl_env_vars);
++		free(pl_env_vars);
++	}
++	if (!*buf) {
++		pl_env_vars = NULL;
++	}
++	size_t n = 1;
++	for (const char *x = buf; *x; x++)
++		if (*x == ',')
++			n++;
++	char **a = pl_env_vars = xnew(char*, n+1);
++	for (char *x = *a++ = xstrdup(buf); *x; x++)
++		if (*x == ',') {
++			*a++ = x+1;
++			*x = '\0';
++		}
++	*a = NULL;
++}
++
+ /* }}} */
+ 
+ /* callbacks for toggle options {{{ */
+@@ -1465,6 +1512,7 @@ static const struct {
+ 	DT(stop_after_queue)
+ 	DN(tree_width_percent)
+ 	DN(tree_width_max)
++	DN(pl_env_vars)
+ 	{ NULL, NULL, NULL, NULL, 0 }
+ };
+ 
+diff --git a/options.h b/options.h
+index 13f766e4dcc47..91cac7c3d1374 100644
+--- a/options.h
++++ b/options.h
+@@ -200,6 +200,8 @@ extern char *clipped_text_internal;
+ extern char *id3_default_charset;
+ extern char *icecast_default_charset;
+ 
++extern char **pl_env_vars;
++
+ /* build option list */
+ void options_add(void);
+ 
+-- 
+2.20.1
+

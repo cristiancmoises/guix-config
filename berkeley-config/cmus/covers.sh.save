@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # ~/.config/cmus/covers.sh
-# FIXED: Dynamic right-side position, no overlap, black bg
+# FINAL VERSION — CORRECT POSITION + NO OVERLAP + BLACK BG
 
 set -euo pipefail
 
-FEH="$(command -v feh)" || exit 0 
-CLASS="cmus_cover_right" 
+FEH="$(command -v feh)" || exit 0
+CLASS="cmus_cover_right"
 CACHE="/tmp/cmus-cover-${USER}"
 
-# Dynamic geometry: 300x300, 30px from right, 80px from top
-SCREEN_WIDTH=$(xdpyinfo | awk '/dimensions/{print $2}' | cut -d'x' -f1)
-X_POS=$(($SCREEN_WIDTH - 100 - 30))
-GEOMETRY="100x300+${X_POS}+80"
+# 300×300 cover, 30px from right edge, 80px from top → NEVER overlaps cmus
+GEOMETRY="300x300-30+80"
 
 # Get current track
 TRACK="$(cmus-remote -Q 2>/dev/null | grep '^file ' | cut -d' ' -f2-)" || exit 0
@@ -31,11 +29,11 @@ if [[ -z "$ART" || ! -f "$ART" ]]; then
     exit 0
 fi
 
-# Kill old window
+# Kill old window instantly
 pkill -f "feh.*--class $CLASS" 2>/dev/null || true
 sleep 0.05
 
-# Launch on right, no overlap
+# Launch on RIGHT side only — NEVER over cmus
 "$FEH" \
   -g "$GEOMETRY" \
   --class "$CLASS" \
@@ -47,4 +45,3 @@ sleep 0.05
   "$ART" >/dev/null 2>&1 &
 
 echo "$!" > "$CACHE"
-exit 0
