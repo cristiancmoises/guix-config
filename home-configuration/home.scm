@@ -53,7 +53,9 @@
  (gnu packages haskell-xyz)
  (gnu packages xml)
  (gnu packages telegram)
+ (gnu packages librewolf)
  (gnu packages games)
+ (gnu packages luanti)
  (gnu packages nss)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
@@ -187,8 +189,11 @@
    jq                          ; JSON processor
    pkg-config                  ; Package config tool
    haunt                       ; SCHEME Web builder
+   bash-minimal
+   qtgraphicaleffects
    gcc-toolchain
    gtk
+   proot
    glib
    alsa-lib
    pkg-config 
@@ -277,8 +282,11 @@
    alsa-utils
    pavucontrol-qt
    qtwebengine
+   qtshadertools
    vlc
    steam
+   luanti
+   luanti-server
    navidrome-bin
    wmctrl
    )
@@ -304,6 +312,7 @@
    exfat-utils
    exfatprogs
    fuse-exfat
+   fuse
    ntfs-3g
    pandoc
    parted
@@ -325,7 +334,7 @@
   (list
    fcitx5
    fcitx5-qt
-   ungoogled-chromium
+   librewolf
    desktop-file-utils
    qemu
    gnome-tweaks
@@ -346,6 +355,7 @@
    qttools
    ninja
    mesa
+   mesa-opencl
    qtwayland
    zoxide
    ;; Bars, notifications, and window management
@@ -393,6 +403,7 @@
    nmap
    tcpdump
    wireshark
+   arp-scan
    )
 
   ;; ===========================
@@ -451,7 +462,6 @@
      font-google-material-design-icons ; Material Design icons
      font-google-noto          ; Comprehensive font for multiple scripts
      font-google-roboto        ; Modern sans-serif font
-     font-gnu-freefont         ; GNU FREE
      font-hack                 ; Monospace font for coding
      font-hermit               ; Monospace font with clean design
      font-ibm-plex             ; Modern font family for UI and documents
@@ -515,6 +525,8 @@
   (list
    nyxt
    google-chrome-stable
+   librewolf
+   ungoogled-chromium
    kitty
    alacritty
    flameshot
@@ -586,7 +598,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("cvv" . "ffmpeg -i video.mkv -codec copy video.mp4")
         ("bgv" . "mplayer -quiet -nosound -loop 0 -vo xv vid.mp4")
         ("l" . "ls -g")
-        ("ll" . "ls -l")
+        ("ll" . "find . -maxdepth 1 -type f -exec du -BG {} +")
         ("grep" . "grep --color=auto")
         ("del" . "shred -uvz")
         ("gob" . "/files/scripts/gob.sh")
@@ -595,6 +607,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("q" . "exit")
         ("n" . "neofetch")
         ("p" . "pfetch")
+        ("f" . "fastfetch") 
         ("ss" . "sudo env TERM=xterm su -")
         ("ee" . "exiftool -recursive -all=")
         ("ex" . "exiftool -all= && del *original*")
@@ -639,7 +652,6 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("class" . "mpv /files/music/Classical/classic/*")
         ("cam" . "/files/scripts/cam.sh")
         ("c" . "clear")
-        ("chromium" . "nix-shell -p ungoogled-chromium")
         ("vis" . "/home/berkeley/.guix-profile/bin/vis")
         ("news" . "twtxt timeline")
         ("tempo" . "curl 'wttr.in/caxias_do_sul?date=next7'")
