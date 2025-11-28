@@ -21,12 +21,12 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 - 🌍 **Full Japanese input** — Fcitx5 IME with extensive font coverage (Iosevka, Noto) for multilingual environments  
 - 🐳 **Containerization & virtualization** — Docker for isolated workloads and QEMU for virtual machine hosting  
 - 🔒 **Hardened SecurityOps kernel** — custom build with [KSPP‑recommended](https://kspp.github.io/Recommended_Settings.html) self‑protection settings, Xanmod and Clear Linux improvements and additional hardened boot arguments
-- 🚀 **Latest Linux Kernel** - Latest stable kernel and the mainline kernel(for tests).
-
+- 🚀 **Latest Linux Kernel**
+- ✨ **Fast Guix Channels (Mirrors)** - [Self-Hosted](https://git.securityops.co)
 With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [Linux kernel**](https://www.kernel.org/), and a curated set of packages and services, this setup balances **performance**, **security**, and **aesthetics** for gaming (Steam), privacy (Mullvad VPN, Tor), development workflows, and Japanese input support.
 
 **Maintainer**: Cristian Cezar Moisés  
-**Last Updated**: November 16, 2025
+**Last Updated**: November 28, 2025
 
 <p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="620"></p>
 
@@ -504,4 +504,4 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
 
 This configuration is licensed under the **GNU General Public License v3.0**. Forked components (e.g., MPV shaders, Cmus themes) retain their respective licenses.
 
-*Last Updated: November 16, 2025*
+*Last Updated: November 28, 2025*

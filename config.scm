@@ -57,12 +57,12 @@
  (gnu packages haskell)        ; Haskell programming language packages
  (gnu packages haskell-apps)   ; Haskell application packages
  (gnu packages acct)           ; Audit
- (nongnu packages anydesk)     ; AnyDesk for remote desktop
  (gnu packages llvm)           ; LLVM compiler infrastructure packages
  (gnu packages vulkan)         ; Vulkan graphics API packages
  (gnu packages gnome)          ; GNOME desktop environment packages
  (gnu packages firmware)       ; Firmware packages
  (gnu packages i2p)           ; I2P anonymous network packages
+ (gnu packages telegram)
  (gnu packages photo)          ; Photography-related packages
  (gnu packages kde-utils)      ; KDE utility packages
  (gnu packages algebra)        ; Algebra-related packages
@@ -80,7 +80,8 @@
  (rosenthal packages emacs-xyz); Custom Emacs packages
  (gnu packages tor-browsers)   ; Tor browser packages
  (small-guix packages mullvad) ; Mullvad VPN packages
- (radix services admin)        ; Custom admin service definitions
+ (radix packages linux)        ; Bustd
+ (radix packages admin)
  (gnu services admin)          ; Admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
  (radix packages image-viewers); Custom image viewer packages
@@ -106,6 +107,7 @@
  (gnu packages lisp-xyz)       ; Lisp-related packages
  (gnu packages rust-apps)      ; Rust application packages
  (rde features bluetooth)      ; Bluetooth feature definitions
+ (gnu packages monitoring)
  (gnu packages jami)           ; Jami secure communication packages
  (gnu packages suckless)       ; Suckless software packages
  (gnu packages finance)        ; Finance-related packages
@@ -203,7 +205,6 @@
  (gnu packages networking)     ; Networking-related packages
  (gnu packages security-token) ; Security token packages
  (gnu packages tls)            ; TLS-related packages
- (gnu packages figlet)         ; Figlet for custom terminal font
  (nongnu packages compression) ; Non-GNU compression packages
  (nongnu packages clojure)     ; Clojure programming language packages
  (nongnu packages linux)       ; Non-GNU Linux-related packages
@@ -223,12 +224,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.17")
+    (version "6.18") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.4.tar.xz")
+              (uri "https://git.kernel.org/torvalds/t/linux-6.18-rc7.tar.gz") ;;  :)
               (sha256
-               (base32 "1nwi0hzikziwkxm9xzf819wb3lsz93i1ns1nzybpbfkgdqli42h1"))))
+               (base32 "0dfcmwc05f02kradg30m7jwiidh7n087gklrmxqvgn8fbbq1caaa"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -511,6 +512,7 @@ EndSection"
   ;; ===========================
   (list
    xterm
+   bustd
    xdpyinfo
    xset
    xwininfo
@@ -519,7 +521,6 @@ EndSection"
    xkill
    setxkbmap
    xmodmap
-   figlet
    xdg-utils
    xrandr
    xmonad
@@ -550,6 +551,10 @@ EndSection"
   ;; Development / Build Essentials
   ;; ===========================
   (list
+   emacs
+   tdlib
+   emacs-telega
+   emacs-org
    gcc
    gcc-toolchain
    linux-libre-headers
@@ -695,7 +700,9 @@ EndSection"
 (services
  (append
   (list
-   ;; AIDE Service for File Integrity (FINT-4316, FINT-4402)
+  ;; Fail2Ban
+  (service fail2ban-service-type)
+  ;; AIDE Service for File Integrity 
    (simple-service 'aide
                    shepherd-root-service-type
                    (list
@@ -771,7 +778,7 @@ table inet filter {
         iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADIP } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
+        ip saddr {$ALIENS} tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
         ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
         ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
         tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
@@ -796,14 +803,14 @@ table inet filter {
         oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
         ct state established,related accept comment \"Allow established connections\"
         udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADIP } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
+        ip daddr {$ALIENS } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
         oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
         oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
         oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
         oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
         oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept comment \"Local networks\"
+        ip daddr { $LOCAL } accept comment \"Local networks\"
         ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
         log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
     }
@@ -891,6 +898,7 @@ SafeLogging 1
      (compression-algorithm 'zstd) ; Use zstd compression
      (priority 100))) ; Set swap priority
 
+
 ;; Expose Root Cache for the user Berkeley
     (service shared-cache-service-type
              (shared-cache-configuration
@@ -917,7 +925,7 @@ SafeLogging 1
     (theme
      (grub-theme
       (resolution '(1920 . 1080))
-      (image (local-file "/home/berkeley/wallpapers/back.png"))))))
+      (image (local-file "/home/berkeley/Photos/wallpaper.png"))))))
   
   ;; Swap Space
   ;; Defines swap space with a specific UUID and priority

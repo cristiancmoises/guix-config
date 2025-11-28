@@ -41,7 +41,7 @@ main = xmonad
 myConfig = def
   { modMask = mod4Mask
   , layoutHook = windowArrange myLayout
-  , terminal = "alacritty"
+  , terminal = "kitty"
   , focusedBorderColor = "#000000"
   , manageHook = myManageHook
   , startupHook = do
@@ -68,6 +68,7 @@ keyBinds =
   [ ("M-d", spawn "rofi -show run") -- Changed to spawn and rely on startupHook
   , ("M-0", spawn "kitty")
   , ("M-i", spawn "scrot")
+  , ("M-r", spawn "sh -c 'kitty -e /usr/bin/turborecorder'")
   , ("M-e", runOrRaise "zen" (className =? "Navigator"))
   , ("M-p", runOrRaise "openshot-qt" (className =? "openshot"))
   , ("M-o", runOrRaise "obs" (className =? "obs"))
@@ -77,10 +78,7 @@ keyBinds =
   , ("M-q", kill)
   , ("M-n", spawn "scrot")
   , ("M-g", spawn "google-chrome")
-  , ("M-m", spawn "flatpak run org.wezfurlong.wezterm")
-  , ("M-S-r", spawn "~/.local/bin/run_anki.sh")
-  , ("M-b", spawn "scrot")
-  , ("M-a", spawn "scrot")
+  , ("M-m", spawn "sh -c 'kitty -e /home/berkeley/.guix-home/profile/bin/cmus & /home/berkeley/.config/cmus/covers.sh'")
   , ("M-l", sendToEmptyWorkspace)
   , ("M-t", viewEmptyWorkspace)
   , ("M-z", spawn "/home/berkeley/.guix-home/profile/bin/flameshot gui")

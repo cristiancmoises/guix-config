@@ -43,6 +43,7 @@
  (gnu home services desktop)
  (gnu home services sound)
  (gnu home services fontutils)
+ (gnu packages suckless)
  (gnu packages file-systems)
  (gnu packages libreoffice)
  (gnu packages ninja)
@@ -192,6 +193,7 @@
    bash-minimal
    qtgraphicaleffects
    gcc-toolchain
+   pinentry-gtk2
    gtk
    proot
    glib
@@ -269,8 +271,8 @@
    vvdec-app
    gimp
    mplayer                       ; Media player
-   ;obs
-   ;obs-pipewire-audio-capture    ;
+   obs
+   obs-pipewire-audio-capture    ;
    imagemagick                   ; Image manipulation
    perl-image-exiftool           ; Metadata extraction
    noisetorch
@@ -377,6 +379,8 @@
    xrandr
    xset
    xterm
+   xkeyboard-config
+   st
    xpra
    xwininfo
    xdpyinfo
@@ -585,11 +589,9 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
       `(("torando" . "~/torando/torando.sh")
         ("toroff" . "~/torando/toroff.sh")
         ("toggle-vpn" . "~/toggle-vpn.sh")
-        ("vpn" . "mullvad relay set location br-sao-wg-201")
         ("gi" . "eval (ssh-agent -c) && ssh-add ~/.ssh/securityops")
         ("android" . "flatpak run com.google.AndroidStudio")
         ("disc" . "flatpak run so.libdb.dissent")
-        ("tele" . "bash /files/scripts/telegram")
         ("repair" . "guix gc --verify=repair,contents")
         ("tx" . "bash /files/scripts/tmp.sh")
         ("wp" . "bash /files/scripts/wal.sh")
@@ -597,8 +599,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("cvi" . "convert original.png -resize 500% resized.png")
         ("cvv" . "ffmpeg -i video.mkv -codec copy video.mp4")
         ("bgv" . "mplayer -quiet -nosound -loop 0 -vo xv vid.mp4")
-        ("l" . "ls -g")
-        ("ll" . "find . -maxdepth 1 -type f -exec du -BG {} +")
+        ("l" . "du -h --max-depth=1 .")
         ("grep" . "grep --color=auto")
         ("del" . "shred -uvz")
         ("gob" . "/files/scripts/gob.sh")
