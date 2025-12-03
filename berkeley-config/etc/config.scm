@@ -227,12 +227,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.17")
+    (version "6.18")
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.4.tar.xz")
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.tar.xz")
               (sha256
-               (base32 "1nwi0hzikziwkxm9xzf819wb3lsz93i1ns1nzybpbfkgdqli42h1"))))
+               (base32 "0jzdvk3xdai1xsq0739hmf8rapw15dw5inarfvqizqx9bmha81li"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))

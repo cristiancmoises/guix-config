@@ -227,9 +227,9 @@
     (version "6.18") 
     (source (origin
               (method url-fetch)
-              (uri "https://git.kernel.org/torvalds/t/linux-6.18-rc7.tar.gz") ;;  :)
+              (uri "https://git.kernel.org/torvalds/t/linux-6.18.tar.gz") ;;  :)
               (sha256
-               (base32 "0dfcmwc05f02kradg30m7jwiidh7n087gklrmxqvgn8fbbq1caaa"))))
+               (base32 "0jzdvk3xdai1xsq0739hmf8rapw15dw5inarfvqizqx9bmha81li"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
