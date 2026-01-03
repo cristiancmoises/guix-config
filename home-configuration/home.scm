@@ -543,6 +543,7 @@
   (list
    google-chrome-stable
    librewolf
+   telegram-desktop
    ungoogled-chromium
    kitty
    alacritty
