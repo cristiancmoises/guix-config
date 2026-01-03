@@ -32,7 +32,7 @@
 ;;   - Replace placeholder paths (e.g., /files/scripts) with generic ones if sharing.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 02, 2025
+;; Last Updated: January 03, 2026
 
 ;;; Module Imports
 ;; Import required Guix modules for home environment, packages, and services
@@ -48,6 +48,7 @@
  (gnu packages libreoffice)
  (gnu packages ninja)
  (gnu packages w3m)
+ (gnu packages dns)
  (gnu packages textutils)
  (gnu packages virtualization)
  (gnu packages gimp)
@@ -57,6 +58,7 @@
  (gnu packages librewolf)
  (gnu packages games)
  (gnu packages luanti)
+ (rosenthal packages web)
  (gnu packages nss)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
@@ -64,6 +66,7 @@
  (gnu packages commencement)
  (gnu packages vulkan)
  (gnu packages glib)
+ (nongnu packages compression)
  (gnu packages benchmark)
  (ajatt packages video)
  (ajatt packages audio)
@@ -160,6 +163,7 @@
  (nongnu packages chrome)           ; Non-GNU Chrome browser
  (saayix packages binaries)         ; Custom binary packages
  (saayix packages python-xyz)
+ (small-guix packages lutris)
  (gnu services dbus)
  (gnu packages fcitx5)
  (gnu home services sound))
@@ -233,7 +237,8 @@
    node                         ; Node.js runtime
    git                          ; Version control
    git-lfs                     ; Git extension for large files
-   sbcl-coleslaw               ; Static site generator in Common Lisp
+   forgejo                     ; My Git service
+   anubis                      ; Block Bad Bots
    cl-clx                       ; X11 client library for Common Lisp
    cl-css                       ; CSS generation in Common Lisp
    guile-ares-rs               ; Guile bindings for Rust
@@ -287,8 +292,12 @@
    qtshadertools
    vlc
    steam
+   lutris
    luanti
    luanti-server
+   pcsx2
+   pcsx2-patches
+   shaderc-for-pcsx2
    navidrome-bin
    wmctrl
    )
@@ -302,6 +311,7 @@
    ranger                          ; Console file manager
    p7zip                           ; Archive tool
    qpdfview                         ; PDF viewer
+   unrar
    libreoffice
    zip
    xlsx2csv
@@ -407,7 +417,11 @@
    nmap
    tcpdump
    wireshark
+   iperf
+   netcat-openbsd
    arp-scan
+   ldns
+   knot
    )
 
   ;; ===========================
@@ -527,7 +541,6 @@
   ;; Optional / Extras moved from config.scm
   ;; ===========================
   (list
-   nyxt
    google-chrome-stable
    librewolf
    ungoogled-chromium
@@ -612,7 +625,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
         ("ss" . "sudo env TERM=xterm su -")
         ("ee" . "exiftool -recursive -all=")
         ("ex" . "exiftool -all= && del *original*")
-        ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://yt.securityops.co")
+        ("yt" . "/files/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://invidious.nerdvpn.de")
         ("enc" . "tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz")
         ("dec" . "openssl enc -d -aes256 -in secured.tar.gz | tar xz")
         ("s" . "sensors")

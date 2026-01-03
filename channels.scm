@@ -61,7 +61,7 @@
   
   (channel
    (name 'rosenthal)
-;  (url "https://codeberg.org/hako/rosenthal.git")
+;   (url "https://codeberg.org/hako/rosenthal.git")
    (url "https://git.securityops.co/securityops/rosenthal")
    (branch "trunk")
    (introduction
@@ -89,14 +89,13 @@
 
   (channel
     (name 'guix-xlibre)
-;   (url "https://gitlab.vulnix.sh/spacecadet/guix-xlibre.git")
-    (url "https://git.securityops.co/securityops/guix-xlibre")
-    (branch "master"))
+;  (url "https://gitlab.vulnix.sh/spacecadet/guix-xlibre.git"))
+  (url "https://git.securityops.co/cristiancmoises/guix-xlibre"))
 
   (channel
    (name 'saayix)
    (branch "main")
-;  (url "https://codeberg.org/look/saayix")
+;   (url "https://codeberg.org/look/saayix")
    (url "https://git.securityops.co/securityops/saayix")
    (introduction
     (make-channel-introduction

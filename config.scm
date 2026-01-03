@@ -34,12 +34,13 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 02, 2025
+;; Last Updated: January 03, 2026
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
 (use-modules
  (gnu)                         ; Core Guix module for system and package management
+ (gnu system)
  (guix download)
  (guix utils)
  (guix build-system gnu)
@@ -82,6 +83,8 @@
  (small-guix packages mullvad) ; Mullvad VPN packages
  (radix packages linux)        ; Bustd
  (radix packages admin)
+ (gnu packages ntp)
+ (gnu packages dns)
  (gnu services admin)          ; Admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
  (radix packages image-viewers); Custom image viewer packages
@@ -224,12 +227,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.18") 
+    (version "6.19-rc3") 
     (source (origin
               (method url-fetch)
-              (uri "https://git.kernel.org/torvalds/t/linux-6.18.tar.gz") ;;  :)
+              (uri "https://git.kernel.org/torvalds/t/linux-6.19-rc3.tar.gz") ;;  :)
               (sha256
-               (base32 "0jzdvk3xdai1xsq0739hmf8rapw15dw5inarfvqizqx9bmha81li"))))
+               (base32 "06pfck92fqq8fb138v8lwml3w2227kzv7nnkzw9lci16wg1g49jd"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -286,6 +289,7 @@
     (modules (list xlibre-video-amdgpu xlibre-input-libinput))
     (drivers '("amdgpu"))
     (keyboard-layout (keyboard-layout "br"))
+    
     (extra-config
      (list
  "Section \"Device\"\n\
@@ -351,7 +355,8 @@ EndSection"
 
 
 ;; Operating System Configuration
-(operating-system            
+(operating-system
+
   ;; Kernel Settings
 (kernel securityops)
   (kernel-arguments
@@ -442,7 +447,7 @@ EndSection"
      "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
 
   (initrd microcode-initrd)
-  
+
   ;; Include firmware for hardware support
   (firmware (list linux-firmware))
 
@@ -455,11 +460,12 @@ EndSection"
   
   ;; Configure Brazilian keyboard layout for console
   (keyboard-layout (keyboard-layout "br"))
-  
-  ;; Hostname of the system
+
+   ;; Hostname of the system
   (host-name "securityops")
   
-  ;; The list of user accounts ('root' is implicit).
+
+;; The list of user accounts ('root' is implicit).
 (users
  (cons*
    (user-account
@@ -474,11 +480,12 @@ EndSection"
 ;; Minimal essential packages only
 
 (packages
- (append
+  (append
+  (list openresolv)
   ;; ===========================
   ;; Browser & Apps
   ;; ===========================
-  (list 
+   (list
    zen-browser-bin
    icecat
    torbrowser
@@ -700,6 +707,7 @@ EndSection"
 (services
  (append
   (list
+
   ;; Fail2Ban
   (service fail2ban-service-type)
   ;; AIDE Service for File Integrity 
@@ -712,7 +720,9 @@ EndSection"
                                '("/bin/sh" "-c" "/usr/bin/aide --config=/etc/aide.conf --check")))
                      (stop #~(make-kill-destructor))
                      (auto-start? #f))))
+                   
    ;; mlocate Service for Locate Database (FILE-6410)
+  
    (simple-service 'mlocate
                    shepherd-root-service-type
                    (list
@@ -733,6 +743,7 @@ EndSection"
                                  "chmod 751 /home && chmod 750 /var/lib/aide")))
                      (stop #~(make-kill-destructor))
                      (auto-start? #t))))
+                     
    ;; Bluetooth Service
    ;; Enables automatic Bluetooth device connectivity
    (service bluetooth-service-type
@@ -747,23 +758,19 @@ EndSection"
    (string-append
      "SUBSYSTEM==\"usb\", ATTR{authorized}=\"1\"\n"))
  #:groups '("plugdev"))
-   ;; NFTables Firewall
-   ;; Implements a strict firewall with input and output filtering, allowing loopback,
-   ;; established connections, Mullvad VPN (UDP port 51820), Tor (local-only),
-   ;; Avahi (mDNS on virbr0), outgoing SSH, HTTPS for Guix and web browsing,
-   ;; Steam, and Mullvad control traffic on UDP port 54347. Includes logging for dropped packets.
-   (service nftables-service-type
-            (nftables-configuration
-             (ruleset
-              (plain-file "nftables.conf" "
-# Strict firewall for privacy and security
-# Replace MULLVAD_SERVER_IP_X with IPs from https://mullvad.net/en/servers
-# Replace MULLVAD_DNS_IP with 100.64.0.23
-flush ruleset
+
+;; =============================================================================
+;; NFTABLES - STRICT
+;; =============================================================================
+(service nftables-service-type
+  (nftables-configuration
+    (ruleset
+      (plain-file "nftables.conf"
+"flush ruleset
 
 table inet filter {
-    # Anti-spoofing: Drop invalid source addresses
     chain antispoof {
+        # Anti-spoofing
         ip saddr 127.0.0.0/8 iif != lo drop
         ip6 saddr ::1 iif != lo drop
         ip saddr 0.0.0.0/8 drop
@@ -773,51 +780,91 @@ table inet filter {
 
     chain input {
         type filter hook input priority filter; policy drop;
+
         jump antispoof
-        ct state invalid drop comment \"Drop invalid connections\"
-        iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
-        ct state established,related accept comment \"Allow established connections\"
-        udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr {$ALIENS} tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
-        ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
-        ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
-        tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
-        tcp flags syn / fin,syn,rst,ack limit rate 12/second accept comment \"Allow new TCP connections\"
-        tcp flags fin,psh,urg / fin,psh,urg drop comment \"Block Xmas scans\"
-        tcp flags syn,rst,ack / syn,rst drop comment \"Block invalid TCP flags\"
-        log prefix \"DROPPED_INPUT: \" level warn limit rate 5/minute drop comment \"Log dropped input\"
+
+        # Established/invalid
+        ct state invalid drop
+        ct state established,related accept
+
+        # Loopback
+        iif \"lo\" accept
+
+        # Mullvad WireGuard
+        udp dport 51820 accept
+
+        # Mullvad control servers (TCP 443)
+        ip saddr {$MULLVAD_IP} tcp sport 443 ct state established accept
+
+        # Tor daemon local ports
+        tcp dport {9050,9040,5353} iif \"lo\" accept
+        udp dport 5353 iif \"lo\" accept
+
+        # ICMP / ICMPv6 essential
+        ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } accept
+        ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } accept
+
+        # Log everything else
+        log prefix \"DROPPED_INPUT: \" level warn limit rate 5/minute drop
     }
 
     chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state invalid drop comment \"Drop invalid connections\"
-        ct state established,related accept comment \"Allow established connections\"
-        iif \"wg0-mullvad\" accept comment \"Allow VPN incoming for torrenting\"
-        oif \"wg0-mullvad\" accept comment \"Allow VPN forwarding for torrenting\"
-        log prefix \"DROPPED_FORWARD: \" level warn limit rate 5/minute drop comment \"Log dropped forward\"
+        type filter hook forward priority filter; policy drop
+        ct state invalid drop
+        ct state established,related accept
+        iif \"wg0-mullvad\" accept
+        oif \"wg0-mullvad\" accept
+        log prefix \"DROPPED_FORWARD: \" level warn limit rate 5/minute drop
     }
 
     chain output {
-        type filter hook output priority filter; policy drop;
-        ct state invalid drop comment \"Drop invalid connections\"
-        oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
-        ct state established,related accept comment \"Allow established connections\"
-        udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr {$ALIENS } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
-        oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
-        oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
-        oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
-        oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
-        oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
-        oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { $LOCAL } accept comment \"Local networks\"
-        ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
-        log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
+        type filter hook output priority filter; policy drop
+        ct state invalid drop
+        ct state established,related accept
+
+        # Loopback
+        oif \"lo\" accept
+
+        # Mullvad VPN
+        oif \"wg0-mullvad\" accept
+        udp dport 51820 accept  # WireGuard
+
+        # Mullvad DNS
+        oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
+
+        # Mullvad control servers
+        ip daddr {$MULLVAD_IP} tcp dport 443 accept
+
+        # Tor local ports
+        oif \"lo\" tcp dport {9050,9040,5353} accept
+        oif \"lo\" udp dport 5353 accept
+
+        # Tor outgoing for directory & bridges
+        oif != \"wg0-mullvad\" tcp dport {443,9001} accept
+
+        # Custom DNS (NextDNS)
+        meta l4proto {tcp, udp} th dport 53 ip daddr {45.90.28.213,45.90.30.213} accept
+        meta l4proto {tcp, udp} th dport 53 ip6 daddr {2a07:a8c0::c9:678a,2a07:a8c1::c9:678a} accept
+
+        # Steam ports
+        oif \"wg0-mullvad\" { tcp dport 27014-27050, udp dport 27000-27150 } accept
+        oif \"wg0-mullvad\" udp dport {3478,4379,4380} accept
+
+        # Torrent ports
+        oif \"wg0-mullvad\" tcp dport 6881-6999 accept
+        oif \"wg0-mullvad\" udp dport 6881-6999 accept
+
+        # Allow local networks
+        ip daddr {10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16} accept
+        ip6 daddr {fe80::/10,fc00::/7} accept
+
+        # Log everything else
+        log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop
     }
-}
-}
-"))))
-   
+}"))))
+
+
+
    ;; Blueman D-Bus Service
    ;; Provides D-Bus integration for Blueman Bluetooth manager
    (simple-service 'blueman dbus-root-service-type (list blueman))
@@ -842,10 +889,10 @@ table inet filter {
       ("QT_ENABLE_HIGHDPI_SCALING" . "0")      ; Disable Qt HiDPI scaling
       ("R600_TEX_ANISO" . "16")                ; Set anisotropic filtering for AMD GPUs
       ))
-   
+
    ;; Mullvad VPN Service
    ;; Runs the Mullvad VPN daemon for secure, private networking
-   (service mullvad-daemon-service-type)
+(service mullvad-daemon-service-type)
    
    ;; Docker Services
    ;; Enables Docker container platform and containerd runtime for containerized applications
@@ -857,29 +904,24 @@ table inet filter {
 
    ;; Tor Service
    ;; Configured for transparent proxying with TransPort and DNSPort 
-   (service tor-service-type
-            (tor-configuration
-             (config-file
-              (plain-file "tor.conf" "
-# Log Tor activity (do not share logs publicly)
+(service tor-service-type
+  (tor-configuration
+    (config-file
+      (plain-file "tor.conf"
+"# Tor config - Minimal working daemon for Tor Browser
 Log notice file /var/log/tor/tor.log
-# Directory for Tor data (do not share contents)
 DataDirectory /var/lib/tor
-# SOCKS proxy port for applications
-SOCKSPort 9050
-# Transparent proxy port for traffic redirection
+SOCKSPort 127.0.0.1:9050
 TransPort 9040
-# Prevent debugger access
-DisableDebuggerAttachment 1
-# Fail if config entries are missing
-AllowMissingTorrcEntries 0
-# Map hosts to .onion addresses
+DNSPort 5353
 AutomapHostsOnResolve 1
-# Prevent acting as an exit node
 ExitPolicy reject *:*
-# Scrub sensitive info from logs
 SafeLogging 1
-"))))
+DisableDebuggerAttachment 1
+ControlPort 9051
+DisableNetwork 0"))))
+
+
    ;; Libvirt Virtualization Service
    ;; Configures libvirt for virtual machine management with Unix socket group
    ;; and TLS port for secure connections
@@ -905,7 +947,7 @@ SafeLogging 1
                (mode 'expose)  ; use 'share se for single-user confiável
                (shared-directory "/root/.cache")
                (users (list (user-cache (user "berkeley"))))))
-
+  
    ;; Custom SLiM service with Xlibre
    (service slim-service-type
             (slim-configuration
