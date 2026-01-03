@@ -32,7 +32,7 @@
 ;;   - Replace placeholder paths (e.g., /files/scripts) with generic ones if sharing.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: January 03, 2026
+;; Last Updated: August 02, 2025
 
 ;;; Module Imports
 ;; Import required Guix modules for home environment, packages, and services
@@ -297,7 +297,6 @@
    luanti-server
    pcsx2
    pcsx2-patches
-   shaderc-for-pcsx2
    navidrome-bin
    wmctrl
    )
@@ -420,6 +419,7 @@
    iperf
    netcat-openbsd
    arp-scan
+   dnstracer
    ldns
    knot
    )
