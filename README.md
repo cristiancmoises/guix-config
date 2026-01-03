@@ -14,7 +14,7 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 
 - 🧠 **AMD Ryzen 3 2200G** — 4 cores / 4 threads for balanced desktop and development performance  
 - 🎮 **Radeon RX 5600/5700 Series** — discrete GPU acceleration for gaming, rendering, and compute tasks  
-- 🌐 **Privacy‑first networking** — seamless integration with Mullvad VPN (WireGuard) and Tor for anonymous, encrypted traffic  
+- 🌐 **Privacy‑first networking** — seamless integration with [Secure DNS](https://army.securityops.co) + Mullvad VPN (WireGuard) and Tor for anonymous, encrypted traffic  
 - 🖼️  **Xmonad** tiling window manager — keyboard‑driven workflow with Rofi for fast application launching  
 - 🎥 **Multimedia acceleration** — MPV and VLC configured for hardware‑assisted decoding and smooth playback  
 - 🎮 **Gaming‑ready** — Steam and Proton support for native and Windows titles  
@@ -26,7 +26,7 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [Linux kernel**](https://www.kernel.org/), and a curated set of packages and services, this setup balances **performance**, **security**, and **aesthetics** for gaming (Steam), privacy (Mullvad VPN, Tor), development workflows, and Japanese input support.
 
 **Maintainer**: Cristian Cezar Moisés  
-**Last Updated**: November 28, 2025
+**Last Updated**: January 03, 2026
 
 <p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="620"></p>
 
@@ -504,4 +504,4 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
 
 This configuration is licensed under the **GNU General Public License v3.0**. Forked components (e.g., MPV shaders, Cmus themes) retain their respective licenses.
 
-*Last Updated: November 28, 2025*
+*Last Updated: January 03, 2026*
