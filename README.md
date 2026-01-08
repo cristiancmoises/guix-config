@@ -180,23 +180,26 @@ CONFIG_AMD_IOMMU_V2=y
    "irqaffinity=1-3" "rcu_nocbs=0-3"
    "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
 ```   
+
 ## 📦 Package Highlights
-Graphics • mesa vulkan-loader libva mangohud
-Browsers • zen-browser torbrowser icecat
-Multimedia • mpv vlc obs
-Development • gcc rust python emacs
-WM • xmonad rofi xmobar polybar
-Network • mullvad-vpn tor qbittorrent
-Fonts • iosevka noto source-han-sans
-Containers • docker qemu
-Security • firejail clamav nftables
+
+- Graphics • mesa vulkan-loader libva mangohud
+- Browsers • zen-browser torbrowser icecat
+- Multimedia • mpv vlc obs
+- Development • gcc rust python emacs
+- WM • xmonad rofi xmobar polybar
+- Network • mullvad-vpn tor qbittorrent
+- Fonts • iosevka noto source-han-sans
+- Containers • docker qemu
+- Security • firejail clamav nftables
 
 ## 🌟 Why this config?
-100% reproducible
-Very hard attack surface
-Pleasant daily driver
-Strong privacy defaults
-Modern AMD optimized
+
+- 100% reproducible
+- Very hard attack surface
+- Pleasant daily driver
+- Strong privacy defaults
+- Modern AMD optimized
 ---
 
 Maintainer: [Cristian Cezar Moisés](https://linkedin.com/in/cristiancezarmoises)
