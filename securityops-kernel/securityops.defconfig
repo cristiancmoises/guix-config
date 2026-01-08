@@ -1,8 +1,8 @@
 ## =======================================================================
-##  securityops.defconfig
+##  securityops-6.19rc4.defconfig
 ##
 ##  Custom Linux Kernel Configuration for:
-##    • AMD Ryzen 3 2200G APU (Raven Ridge, Zen 1 cores)
+##    • AMD Ryzen 3 2200G APU (Zen 1 cores, Raven Ridge)
 ##    • AMD Radeon RX 5600/5700 Series GPU (Navi 10)
 ##
 ##  Objectives:
@@ -12,10 +12,8 @@
 ##    • Retain legacy initrd model with linux-firmware only
 ##
 ##  Notes:
-##    - This configuration is tuned for GNU Guix System and the XanMod kernel.
-##    - It aims to balance *security*, *responsiveness*, and *throughput*.
-##    - Recommended kernel command-line parameters complement this setup
-##      (e.g. mitigations=auto,nosmt, iommu=pt, amd_iommu=on, lsm=yama,apparmor).
+##    - Tuned for GNU Guix System and XanMod kernel.
+##    - Boot parameters recommended: mitigations=auto,nosmt iommu=pt amd_iommu=on lsm=yama,apparmor
 ##
 ## =======================================================================
 
@@ -23,160 +21,120 @@
 # ────────────────────────────────
 #   Base Architecture
 # ────────────────────────────────
-CONFIG_64BIT=y
-CONFIG_X86_64=y
-CONFIG_HIGH_RES_TIMERS=y        # Improves timer precision and latency
-CONFIG_HZ_1000=y                # Low-latency scheduler tick rate
-CONFIG_PREEMPT_VOLUNTARY=y      # Balanced preemption model (XanMod default)
-CONFIG_PREEMPT_DYNAMIC=y
-CONFIG_PREEMPT=y
+CONFIG_64BIT=y                  # Build a 64-bit kernel
+CONFIG_X86_64=y                 # Target x86_64 architecture
+CONFIG_HIGH_RES_TIMERS=y        # High-resolution timers for precise scheduling
+CONFIG_HZ_1000=y                # Scheduler tick = 1000 Hz (low latency)
+CONFIG_PREEMPT_VOLUNTARY=y      # Voluntary preemption (balanced throughput/latency)
+CONFIG_PREEMPT_DYNAMIC=y        # Runtime switchable preemption model
+CONFIG_PREEMPT=y                # Enable kernel preemption
 
 
 # ────────────────────────────────
 #   CPU / Scheduler / Performance
 # ────────────────────────────────
-CONFIG_MZEN=y                   # Optimize for AMD Zen microarchitecture
-CONFIG_MNATIVE=y                # Tune for the local CPU
+CONFIG_MZEN=y                   # Optimize for AMD Zen cores
+CONFIG_MNATIVE=y                # Tune for local CPU
 CONFIG_SCHED_AUTOGROUP=y        # Fair desktop scheduling
-CONFIG_SCHED_MC_PRIO=y          # Improve scheduling on multi-core CPUs
-CONFIG_SCHED_SMT=y              # Enable simultaneous multithreading awareness
-CONFIG_IRQ_TIME_ACCOUNTING=y    # Accurate CPU time accounting
-CONFIG_BPF=y
-CONFIG_BPF_SYSCALL=y
-CONFIG_BPF_JIT=y
-CONFIG_CGROUP_BPF=y
+CONFIG_SCHED_MC_PRIO=y          # Multi-core aware scheduling
+CONFIG_SCHED_SMT=y              # SMT/HyperThreading aware scheduling
+CONFIG_IRQ_TIME_ACCOUNTING=y    # Accurate CPU time accounting for interrupts
+
+
+# ────────────────────────────────
+#   BPF / IO / Networking
+# ────────────────────────────────
+CONFIG_BPF=y                    # Enable Berkeley Packet Filter
+CONFIG_BPF_SYSCALL=y            # Allow user-space BPF programs
+CONFIG_BPF_JIT=y                # JIT compile BPF for speed
+CONFIG_CGROUP_BPF=y             # Attach BPF programs to cgroups
 CONFIG_IO_URING=y               # High-performance async I/O
 CONFIG_TCP_CONG_BBR=y           # Google’s BBR congestion control
-CONFIG_BFQ_GROUP_IOSCHED=y      # Fair I/O scheduling (great for desktop use)
+CONFIG_BFQ_GROUP_IOSCHED=y      # Fair I/O scheduler (desktop-friendly)
 
 
 # ────────────────────────────────
 #   Security Hardening
 # ────────────────────────────────
-CONFIG_HARDENED_USERCOPY=y
-CONFIG_DEBUG_RODATA=y
-CONFIG_STRICT_DEVMEM=y
-CONFIG_STRICT_KERNEL_RWX=y
-CONFIG_UBSAN_ALIGNMENT=y
-CONFIG_STACKPROTECTOR_STRONG=y
-CONFIG_CC_STACKPROTECTOR_REGULAR=y
-CONFIG_FORTIFY_SOURCE=y
-CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
-CONFIG_INIT_ON_FREE_DEFAULT_ON=y
-CONFIG_REFCOUNT_FULL=y
-CONFIG_RANDOMIZE_BASE=y
-CONFIG_PAGE_TABLE_ISOLATION=y
-CONFIG_KFENCE=y                 # Lightweight memory safety error detector
-CONFIG_SECURITY=y
-CONFIG_SECURITYFS=y
-CONFIG_SECURITY_YAMA=y
-CONFIG_SECURITY_APPARMOR=y
-CONFIG_LSM="yama,apparmor"      # Restrict user-space attack surface
-CONFIG_MODULE_SIG_FORCE=y       # Enforce signed kernel modules
-CONFIG_MODULE_SIG_ALL=y
-CONFIG_MODULE_COMPRESS_ZSTD=y   # Fast compression for modules
+CONFIG_HARDENED_USERCOPY=y      # Hardened copy_from/to_user checks
+CONFIG_DEBUG_RODATA=y           # Mark kernel RO data non-writable
+CONFIG_STRICT_DEVMEM=y          # Restrict /dev/mem access
+CONFIG_STRICT_KERNEL_RWX=y      # Enforce RWX permissions in kernel memory
+CONFIG_UBSAN_ALIGNMENT=y        # Undefined Behavior Sanitizer (alignment)
+CONFIG_STACKPROTECTOR_STRONG=y  # Strong stack protector
+CONFIG_FORTIFY_SOURCE=y         # Hardened compile-time memory checks
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y # Zero-init memory on alloc
+CONFIG_INIT_ON_FREE_DEFAULT_ON=y  # Zero-init memory on free
+CONFIG_REFCOUNT_FULL=y          # Full refcount validation
+CONFIG_RANDOMIZE_BASE=y         # Kernel ASLR
+CONFIG_PAGE_TABLE_ISOLATION=y   # Mitigate Meltdown
+CONFIG_KFENCE=y                 # Lightweight memory safety detector
+CONFIG_SECURITY=y               # Enable LSM framework
+CONFIG_SECURITYFS=y             # Security filesystem
+CONFIG_SECURITY_YAMA=y          # Yama LSM (restrict ptrace)
+CONFIG_SECURITY_APPARMOR=y      # AppArmor LSM
+CONFIG_LSM="yama,apparmor,lockdown" # Load Yama, AppArmor, Lockdown
+CONFIG_MODULE_SIG_FORCE=y       # Require signed modules
+CONFIG_MODULE_SIG_ALL=y         # Sign all modules at build
+CONFIG_MODULE_COMPRESS_ZSTD=y   # Compress modules with Zstandard
+CONFIG_RETPOLINE=y              # Spectre v2 mitigation
+CONFIG_STRICT_MODULE_RWX=y      # Enforce RWX on modules
 
 
 # ────────────────────────────────
 #   Memory / Virtual Memory
 # ────────────────────────────────
-CONFIG_ZSWAP=y
-CONFIG_ZSWAP_COMPRESSOR=zstd
-CONFIG_ZRAM=y
-CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd
-CONFIG_ZRAM_WRITEBACK=y
-CONFIG_TRANSPARENT_HUGEPAGE=y
-CONFIG_MGLRU=y                  # Multi-Generational LRU for better memory reclaim
+CONFIG_ZSWAP=y                  # Compressed swap cache
+CONFIG_ZSWAP_COMPRESSOR=zstd    # Use Zstandard for Zswap
+CONFIG_ZRAM=y                   # Compressed RAM block device
+CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd # Zstandard for ZRAM
+CONFIG_ZRAM_WRITEBACK=y         # Allow ZRAM writeback to disk
+CONFIG_TRANSPARENT_HUGEPAGE=y   # Transparent huge pages
+CONFIG_MGLRU=y                  # Multi-Generational LRU
 
 
 # ────────────────────────────────
 #   Filesystems
 # ────────────────────────────────
-CONFIG_EXT4_FS=y
-CONFIG_BTRFS_FS=y
-CONFIG_F2FS_FS=y
-CONFIG_XFS_FS=y
-CONFIG_FUSE_FS=y
+CONFIG_EXT4_FS=y                # EXT4 filesystem
+CONFIG_BTRFS_FS=y               # Btrfs filesystem
+CONFIG_F2FS_FS=y                # Flash-Friendly FS (SSD)
+CONFIG_XFS_FS=y                 # XFS filesystem
+CONFIG_FUSE_FS=y                # Filesystem in Userspace (FUSE)
 
 
 # ────────────────────────────────
 #   AMDGPU / DRM / Video
 # ────────────────────────────────
-CONFIG_DRM=y
-CONFIG_DRM_AMDGPU=y             # Core AMDGPU kernel driver
-CONFIG_DRM_KMS_HELPER=y
-CONFIG_DRM_TTM=y
-CONFIG_DRM_VRAM_HELPER=y
-CONFIG_DRM_AMDKFD=y             # HSA compute driver (ROCm-compatible)
-CONFIG_AMDKFD_KCQ=y
-CONFIG_HSA_AMD=y
-CONFIG_DRM_VCN=y                # Video Codec Next (modern decode/encode)
+CONFIG_DRM=y                    # Direct Rendering Manager
+CONFIG_DRM_AMDGPU=y             # AMD GPU driver
+CONFIG_DRM_KMS_HELPER=y         # KMS helpers
+CONFIG_DRM_TTM=y                # GPU memory management
+CONFIG_DRM_VRAM_HELPER=y        # VRAM helpers
+CONFIG_DRM_AMDKFD=y             # Kernel Fusion Driver (ROCm/HSA)
+CONFIG_AMDKFD_KCQ=y             # Kernel Command Queue
+CONFIG_HSA_AMD=y                # HSA AMD support
+CONFIG_DRM_VCN=y                # Video Codec Next (modern)
 CONFIG_DRM_VCE=y                # Video Codec Engine (legacy)
 CONFIG_DRM_UVD=y                # Unified Video Decoder (legacy)
-CONFIG_DRM_VESA=y               # Generic fallback framebuffer
+CONFIG_DRM_VESA=y               # VESA framebuffer fallback
 
 
 # ────────────────────────────────
-#   Storage
+#   Storage / USB / NVMe
 # ────────────────────────────────
-CONFIG_ATA=y
-CONFIG_AHCI=y                   # SATA controller support
-CONFIG_SCSI=y
-CONFIG_USB_UAS=y                # USB Attached SCSI for high-speed storage
-CONFIG_USB_STORAGE=y
-CONFIG_NVME_CORE=y
-CONFIG_NVME=y
-
-
-# ────────────────────────────────
-#   USB / HID
-# ────────────────────────────────
-CONFIG_USB=y
-CONFIG_USB_XHCI_HCD=y
-CONFIG_USB_EHCI_HCD=y
-CONFIG_USB_HID=y
-CONFIG_USB_COMMON=y
-CONFIG_USB_UVC=y                # USB Video Class (for webcams)
-CONFIG_HID_GENERIC=y
-CONFIG_HID=y
-CONFIG_INPUT=y
-
-
-# ────────────────────────────────
-#   Networking
-# ────────────────────────────────
-CONFIG_NETFILTER=y
-CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
-CONFIG_NETFILTER_XT_MATCH_STATE=y
-CONFIG_BRIDGE_NETFILTER=y
-CONFIG_NETFILTER_ADVANCED=y
-CONFIG_WIREGUARD=y              # Modern VPN protocol, in-kernel implementation
-
-
-# ────────────────────────────────
-#   Other Hardware Support
-# ────────────────────────────────
-CONFIG_MFD_CORE=y
-CONFIG_I2C=y
-CONFIG_SPI=y
-CONFIG_WATCHDOG=y
-
-
-# ────────────────────────────────
-#   Virtualization
-# ────────────────────────────────
-CONFIG_VIRTIO=y
-CONFIG_VIRTIO_PCI=y
-CONFIG_VIRTIO_BLK=y
-CONFIG_VIRTIO_NET=y
-CONFIG_VIRTIO_PCI_LEGACY=y
+CONFIG_ATA=y                    # ATA support
+CONFIG_AHCI=y                   # AHCI SATA controller
+CONFIG_SCSI=y                   # SCSI subsystem
+CONFIG_USB_UAS=y                # USB Attached SCSI
+CONFIG_USB_STORAGE=y            # USB mass storage
+CONFIG_NVME_CORE=y              # NVMe core
+CONFIG_NVME=y                   # NVMe block device
 
 
 # ────────────────────────────────
 #   Debugging / Development Tools
 # ────────────────────────────────
-CONFIG_DEBUG_KERNEL=y
-CONFIG_DEBUG_INFO=y
-CONFIG_DEBUG_INFO_DWARF5=y      # Modern DWARF5 format for smaller debug symbols
-CONFIG_KPROBES=y
-CONFIG_KGDB=y                   # Kernel debugger support
+CONFIG_DEBUG_KERNEL=y           # Kernel debugging features
+CONFIG_DEBUG_INFO=y             # Build with debug info
+CONFIG_DEBUG_INFO_DWARF5=y      # Use DWARF v5 format
