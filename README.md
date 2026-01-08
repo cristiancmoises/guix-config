@@ -12,8 +12,8 @@
 
 <br>
 
-**Hardened • Minimal • Private • Fast**  
-Declarative GNU Guix system — AMD Ryzen 2200G + Radeon RX 5600/5700
+**Hardened • Minimal • Private • Fast** 
+Declarative GNU Guix system - AMD Ryzen 2200G + Radeon RX 5600/5700
 
 **Kernel:** Custom SecurityOps 6.18.4 (KSPP + XanMod + Clear Linux + extreme hardening)
 
