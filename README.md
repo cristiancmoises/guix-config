@@ -202,10 +202,10 @@ CONFIG_AMD_IOMMU_V2=y
 - Modern AMD optimized
 ---
 
-Maintainer: [Cristian Cezar Moisés](https://linkedin.com/in/cristiancezarmoises)
-License: GNU GPL-3.0
-Last update: January 08, 2026
-Videos → https://youtube.com/@securityops
+- Maintainer: [Cristian Cezar Moisés](https://linkedin.com/in/cristiancezarmoises)
+- License: GNU GPL-3.0
+- Last update: January 08, 2026
+- Videos → https://youtube.com/@securityops
 
 ---
 
