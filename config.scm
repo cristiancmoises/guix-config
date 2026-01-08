@@ -361,44 +361,72 @@ EndSection"
   ;; Kernel Settings
 (kernel securityops)
 (kernel-arguments
- '("quiet"                          ; minimize boot messages
-   "splash"                         ; show graphical boot splash
-   "noatime"                        ; disable access time updates (perf + SSD life)
-   "mitigations=auto"               ; apply all available CPU vulnerability mitigations
-   "nosmt"                          ; disable SMT (hyper-threading) – strongest Spectre/MDS protection
-   "amd_iommu=on"                   ; enable AMD IOMMU for DMA protection
-   "iommu=pt"                       ; IOMMU passthrough mode (performance + security)
-   "lsm=yama,apparmor,integrity,lockdown,landlock" ; strict LSM order
-   "apparmor=1"                     ; force AppArmor activation
-   "security=apparmor"              ; set AppArmor as primary security module
-   "lockdown=confidentiality"       ; strongest kernel lockdown mode
-   "module.sig_enforce=1"           ; require all modules to be signed
-   "slab_nomerge"                   ; prevent slab cache merging (heap isolation)
-   "page_alloc.shuffle=1"           ; randomize page allocator freelist
-   "init_on_alloc=1"                ; zero memory on allocation (use-after-free protection)
-   "init_on_free=1"                 ; zero memory on free (use-after-free protection)
-   "kptr_restrict=2"                ; hide all kernel pointers from unprivileged users
-   "randomize_kstack_offset=on"     ; randomize kernel stack offset (stack clash mitigation)
-   "vsyscall=none"                  ; disable legacy vsyscall page (attack surface reduction)
-   "preempt=full"                   ; full kernel preemption (best responsiveness)
-   "amd_pstate=active"              ; enable modern AMD P-state driver
-   "tcp_congestion_control=bbr"     ; use BBR TCP congestion control (best performance)
-   "net.core.default_qdisc=fq_codel" ; fair queuing + CoDel (low latency network)
-   "random.trust_cpu=off"           ; do not trust CPU hardware RNG (extra entropy caution)
-   "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
-   "mce=1"                          ; Machine Check Exception handling
-   "amdgpu.sched_policy=2"          ; High-priority AMD GPU scheduling
-   "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-   "amdgpu.backlight=0"             ; Disable backlight control
-   "h264_amf=1"                     ; H.264 encoding
-   "irqaffinity=1-3"                ; IRQs on CPUs 1-3
-   "cpufreq.default_governor=schedutil" ; Schedutil scaling
-   "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
-   "noirqdebug"                     ; Disable IRQ debugging
-   "watchdog"                       ; Hardware watchdog
-   "noreplace-smp"                  ; Prevent SMP code replacement
-   "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc" ; Blacklist dangerous modules
-   ))
+ '(
+   ;; ───────────── Boot hygiene ─────────────
+   "quiet"
+   "splash"
+   "noatime"
+
+   ;; ───────────── CPU & speculative execution ─────────────
+   "mitigations=on"
+   "nosmt"
+   "spectre_v2=on"
+   "spec_store_bypass_disable=on"
+   "l1tf=full,force"
+   "mds=full"
+   "tsx=off"
+   "pti=on"
+
+   ;; ───────────── Memory safety ─────────────
+   "slab_nomerge"
+   "page_alloc.shuffle=1"
+   "init_on_alloc=1"
+   "init_on_free=1"
+   "page_poison=1"
+   "slub_debug=FZ"
+   "randomize_kstack_offset=on"
+   "vsyscall=none"
+   "kptr_restrict=2"
+
+   ;; ───────────── IOMMU / DMA ─────────────
+   "amd_iommu=on"
+   "iommu=force"
+
+   ;; ───────────── LSM & lockdown ─────────────
+   "lsm=yama,apparmor,integrity,lockdown,landlock"
+   "apparmor=1"
+   "security=apparmor"
+   "lockdown=confidentiality"
+
+   ;; ───────────── Modules & kernel integrity ─────────────
+   "module.sig_enforce=1"
+
+   ;; ───────────── Scheduler / responsiveness ─────────────
+   "preempt=voluntary"
+   "rcu_nocbs=0-3"
+   "irqaffinity=1-3"
+   "cpufreq.default_governor=schedutil"
+   "amd_pstate=active"
+
+   ;; ───────────── Network ─────────────
+   "tcp_congestion_control=bbr"
+   "net.core.default_qdisc=fq_codel"
+
+   ;; ───────────── Entropy ─────────────
+   "random.trust_cpu=off"
+
+   ;; ───────────── Reliability ─────────────
+   "mce=1"
+   "watchdog"
+
+   ;; ───────────── GPU (Navi 10) ─────────────
+   "amdgpu.sched_policy=2"
+   "amdgpu.abmlevel=0"
+   "amdgpu.backlight=0"
+
+   ;; ───────────── Attack surface reduction ─────────────
+   "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"
+ ))
 
   (initrd microcode-initrd)
 
@@ -749,7 +777,7 @@ table inet filter {
         udp dport 51820 accept
 
         # Mullvad control servers (TCP 443)
-        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
+        ip saddr {$MULLVAD} tcp sport 443 ct state established accept
 
         # Tor daemon local ports
         tcp dport {9050,9040,5353} iif \"lo\" accept
@@ -788,7 +816,7 @@ table inet filter {
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
 
         # Mullvad control servers
-        ip daddr {$MULLVADIP} tcp dport 443 accept
+        ip daddr {$MULLVAD} tcp dport 443 accept
 
         # Tor local ports
         oif \"lo\" tcp dport {9050,9040,5353} accept
