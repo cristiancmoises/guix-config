@@ -34,12 +34,13 @@
 ;;   - Do not share Tor logs or DataDirectory contents.
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: August 02, 2025
+;; Last Updated: January 03, 2026
 
 ;;; Module Imports
 ;; Import required Guix modules for package and service definitions
 (use-modules
  (gnu)                         ; Core Guix module for system and package management
+ (gnu system)
  (guix download)
  (guix utils)
  (guix build-system gnu)
@@ -47,6 +48,7 @@
  (xlibre)
  (guix gexp)
  (gnu packages shells)
+ (gnu packages apparmor)
  (guix build-system linux-module)
  (gnu packages gl)             ; OpenGL-related packages
  (gnu bootloader)              ; Bootloader utilities
@@ -56,12 +58,13 @@
  (gnu packages haskell)        ; Haskell programming language packages
  (gnu packages haskell-apps)   ; Haskell application packages
  (gnu packages acct)           ; Audit
- (nongnu packages anydesk)     ; AnyDesk for remote desktop
  (gnu packages llvm)           ; LLVM compiler infrastructure packages
  (gnu packages vulkan)         ; Vulkan graphics API packages
  (gnu packages gnome)          ; GNOME desktop environment packages
  (gnu packages firmware)       ; Firmware packages
  (gnu packages i2p)           ; I2P anonymous network packages
+ (gnu packages telegram)
+ (gnu packages ncdu)
  (gnu packages photo)          ; Photography-related packages
  (gnu packages kde-utils)      ; KDE utility packages
  (gnu packages algebra)        ; Algebra-related packages
@@ -79,7 +82,10 @@
  (rosenthal packages emacs-xyz); Custom Emacs packages
  (gnu packages tor-browsers)   ; Tor browser packages
  (small-guix packages mullvad) ; Mullvad VPN packages
- (radix services admin)        ; Custom admin service definitions
+ (radix packages linux)        ; Bustd
+ (radix packages admin)
+ (gnu packages ntp)
+ (gnu packages dns)
  (gnu services admin)          ; Admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
  (radix packages image-viewers); Custom image viewer packages
@@ -105,6 +111,7 @@
  (gnu packages lisp-xyz)       ; Lisp-related packages
  (gnu packages rust-apps)      ; Rust application packages
  (rde features bluetooth)      ; Bluetooth feature definitions
+ (gnu packages monitoring)
  (gnu packages jami)           ; Jami secure communication packages
  (gnu packages suckless)       ; Suckless software packages
  (gnu packages finance)        ; Finance-related packages
@@ -202,7 +209,6 @@
  (gnu packages networking)     ; Networking-related packages
  (gnu packages security-token) ; Security token packages
  (gnu packages tls)            ; TLS-related packages
- (gnu packages figlet)         ; Figlet for custom terminal font
  (nongnu packages compression) ; Non-GNU compression packages
  (nongnu packages clojure)     ; Clojure programming language packages
  (nongnu packages linux)       ; Non-GNU Linux-related packages
@@ -218,21 +224,16 @@
 (use-package-modules
  bootloaders package-management version-control gcc bash certs admin linux xorg)
 
-;(define-public securityops
-;  (package
-;    (inherit linux)
-;    (name "securityops")                 ; <-- A CHAD KERNEL HERE!
-;    (version "n.n")       ; 
 (define-public securityops
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.18")
+    (version "6.18.4") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.tar.xz")
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.4.tar.xz") ;;  :)
               (sha256
-               (base32 "0jzdvk3xdai1xsq0739hmf8rapw15dw5inarfvqizqx9bmha81li"))))
+               (base32 "1asza9m4vb7lghxaiy5fpnbwmb9a44pgjclbpgv1p77plnf16l7q"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -289,6 +290,7 @@
     (modules (list xlibre-video-amdgpu xlibre-input-libinput))
     (drivers '("amdgpu"))
     (keyboard-layout (keyboard-layout "br"))
+    
     (extra-config
      (list
  "Section \"Device\"\n\
@@ -354,95 +356,52 @@ EndSection"
 
 
 ;; Operating System Configuration
-(operating-system            
+(operating-system
+
   ;; Kernel Settings
 (kernel securityops)
-  (kernel-arguments
-   '(
-     ;; ─── Boot and General ─────────────────────────────────────────────
-     "quiet"                           ; Minimize boot output
-     "splash"                          ; Graphical splash screen
-     "noatime"                         ; Disable file access time updates
-     ;; ─── Memory Compression ───────────────────────────────────────────
-     "zswap.enabled=1"                ; Enable zswap
-     "zswap.compressor=zstd"          ; Zstandard compression
-     "zswap.max_pool_percent=15"      ; Limit zswap to 15% of RAM
-     "zswap.zpool=z3fold"             ; Z3fold allocator
-     "zswap.accept_threshold_percent=90" ; Compress at 90% memory usage
-     "zswap.same_filled_pages_enabled=1" ; Deduplicate pages
-     ;; ─── I/O and Filesystem ──────────────────────────────────────────
-     "elevator=bfq"                   ; BFQ scheduler
-     "rootflags=data=ordered"         ; Ordered journaling
-     "fsck.mode=auto"                 ; Auto filesystem checks
-     "fsck.repair=preen"              ; Safe repairs
-     "vm.dirty_writeback_centisecs=1000" ; Flush dirty pages every 10s
-     ;; ─── CPU and Memory Security ─────────────────────────────────────
-     "module.sig_enforce=1"           ; Enforce signed modules
-     "kptr_restrict=2"                ; Hide kernel pointers
-     "lockdown=confidentiality"       ; Kernel lockdown
-     "slab_nomerge"                   ; Prevent slab merging
-     "page_alloc.shuffle=1"           ; Randomize page allocator
-     "random.trust_cpu=off"           ; Disable CPU RNG trust
-     "preempt=full"                   ; Full preemption
-     "sched_yield_type=2"             ; Aggressive yield
-     "transparent_hugepage=always"    ; Enable hugepages
-     "vsyscall=none"                  ; Disable vsyscall
-     "randomize_kstack_offset=on"     ; Randomize kernel stack
-     ;; ─── Security Mitigations ────────────────────────────────────────
-     "mitigations=auto"               ; Auto-apply CPU mitigations
-     "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
-     "mce=1"                          ; Machine Check Exception handling
-     ;; ─── USB Security ───────────────────────────────────────────────
-     ; "usbcore.authorized_default=0"  ; Disable auto-authorizing USB devices (anti-badusb)
-     ;; ─── Networking Optimizations ───────────────────────────────────
-     "tcp_congestion_control=bbr"     ; Use BBR for efficient TCP congestion control
-     "net.core.default_qdisc=fq_codel" ; Use fq_codel for fair network queuing
-     "net.ipv4.tcp_fq_codel_quantum=1000" ; Set fq_codel quantum for TCP
-     "net.ipv4.tcp_fq_codel_target=5000"  ; Set fq_codel target latency
-     "net.ipv4.tcp_ecn=1"             ; Enable Explicit Congestion Notification
-     "net.ipv4.tcp_fastopen=3"        ; Enable TCP Fast Open for faster connections
-     "net.core.netdev_max_backlog=10000" ; Increase network device backlog
-     "net.core.rmem_max=16777216"     ; Increase receive buffer size
-     "net.core.wmem_max=16777216"     ; Increase send buffer size
-     "net.ipv4.tcp_rmem=4096 87380 16777216" ; Set TCP receive buffer sizes
-     "net.ipv4.tcp_wmem=4096 65536 16777216" ; Set TCP send buffer sizes
-     "net.ipv4.tcp_mtu_probing=1"     ; Enable MTU probing for TCP
-     "net.core.optmem_max=131072"     ; Increase socket option memory
-     "net.ipv4.tcp_window_scaling=1"  ; Enable TCP window scaling
-     "net.ipv4.tcp_sack=1"            ; Enable Selective Acknowledgments
-     "net.ipv4.tcp_early_retrans=3"   ; Enable early retransmission for TCP
-     "net.ipv4.tcp_thin_linear_timeouts=1" ; Optimize TCP timeouts
-     "ipv6.disable=0"                 ; Enable IPv6 support
-     ;; ─── AMD GPU Tuning ─────────────────────────────────────────────
-     ;"amdgpu.ppfeaturemask=0xffffffff" ; Unlock all features
-     ;"amdgpu.dc=0"                    ; Enable Display Core
-     ;"amdgpu.dpm=0"                   ; Dynamic Power Management
-     ;"amdgpu.aspm=1"                  ; Active State Power Management
-     ;"amdgpu.gpu_recovery=1"          ; GPU recovery
-     ;"amdgpu.mcbp=1"                  ; Mid-chain bus power
-     ;"amdgpu.dcfeaturemask=0xffffffff" ; All Display Core features
-     ;"amdgpu.sched_policy=2"          ; High-priority scheduling
-     ;"amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-     ;"amdgpu.backlight=0"             ; Disable backlight control
-     ;"amdgpu.runpm=1"                 ; Enable runtime power management
-     "h264_amf=1"                     ; H.264 encoding
-     ;; ─── Power and Performance ──────────────────────────────────────
-     "irqaffinity=1-3"                ; IRQs on CPUs 1-3
-     "cpufreq.default_governor=schedutil" ; Schedutil scaling
-     "amd_pstate=active"              ; AMD P-state driver
-     "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
-     ;; ─── IOMMU and Virtualization ───────────────────────────────────
-     "amd_iommu=on"                   ; Enable AMD IOMMU
-     "iommu=pt"                       ; Passthrough mode
-     ;; ─── System Behavior ────────────────────────────────────────────
-     "noirqdebug"                     ; Disable IRQ debugging
-     "watchdog"                       ; Hardware watchdog
-     "noreplace-smp"                  ; Prevent SMP code replacement
-     "sysrq_always_enabled=1"         ; Enable SysRq
-     "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
+(kernel-arguments
+ '("quiet"                          ; minimize boot messages
+   "splash"                         ; show graphical boot splash
+   "noatime"                        ; disable access time updates (perf + SSD life)
+   "mitigations=auto"               ; apply all available CPU vulnerability mitigations
+   "nosmt"                          ; disable SMT (hyper-threading) – strongest Spectre/MDS protection
+   "amd_iommu=on"                   ; enable AMD IOMMU for DMA protection
+   "iommu=pt"                       ; IOMMU passthrough mode (performance + security)
+   "lsm=yama,apparmor,integrity,lockdown,landlock" ; strict LSM order
+   "apparmor=1"                     ; force AppArmor activation
+   "security=apparmor"              ; set AppArmor as primary security module
+   "lockdown=confidentiality"       ; strongest kernel lockdown mode
+   "module.sig_enforce=1"           ; require all modules to be signed
+   "slab_nomerge"                   ; prevent slab cache merging (heap isolation)
+   "page_alloc.shuffle=1"           ; randomize page allocator freelist
+   "init_on_alloc=1"                ; zero memory on allocation (use-after-free protection)
+   "init_on_free=1"                 ; zero memory on free (use-after-free protection)
+   "kptr_restrict=2"                ; hide all kernel pointers from unprivileged users
+   "randomize_kstack_offset=on"     ; randomize kernel stack offset (stack clash mitigation)
+   "vsyscall=none"                  ; disable legacy vsyscall page (attack surface reduction)
+   "preempt=full"                   ; full kernel preemption (best responsiveness)
+   "amd_pstate=active"              ; enable modern AMD P-state driver
+   "tcp_congestion_control=bbr"     ; use BBR TCP congestion control (best performance)
+   "net.core.default_qdisc=fq_codel" ; fair queuing + CoDel (low latency network)
+   "random.trust_cpu=off"           ; do not trust CPU hardware RNG (extra entropy caution)
+   "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
+   "mce=1"                          ; Machine Check Exception handling
+   "amdgpu.sched_policy=2"          ; High-priority AMD GPU scheduling
+   "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
+   "amdgpu.backlight=0"             ; Disable backlight control
+   "h264_amf=1"                     ; H.264 encoding
+   "irqaffinity=1-3"                ; IRQs on CPUs 1-3
+   "cpufreq.default_governor=schedutil" ; Schedutil scaling
+   "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
+   "noirqdebug"                     ; Disable IRQ debugging
+   "watchdog"                       ; Hardware watchdog
+   "noreplace-smp"                  ; Prevent SMP code replacement
+   "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc" ; Blacklist dangerous modules
+   ))
 
   (initrd microcode-initrd)
-  
+
   ;; Include firmware for hardware support
   (firmware (list linux-firmware))
 
@@ -455,11 +414,12 @@ EndSection"
   
   ;; Configure Brazilian keyboard layout for console
   (keyboard-layout (keyboard-layout "br"))
-  
-  ;; Hostname of the system
+
+   ;; Hostname of the system
   (host-name "securityops")
   
-  ;; The list of user accounts ('root' is implicit).
+
+;; The list of user accounts ('root' is implicit).
 (users
  (cons*
    (user-account
@@ -467,24 +427,19 @@ EndSection"
      (comment "berkeley")
      (group "users")
      (home-directory "/home/berkeley")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")))
-   (user-account
-     (name "leticia")
-     (comment "Letícia")
-     (group "users")
-     (home-directory "/home/leticia")
-     (supplementary-groups '("wheel" "input" "netdev" "audio" "video" "plugdev")) )
+     (supplementary-groups '("wheel" "input" "docker" "kvm" "netdev" "audio" "video" "plugdev")))
    %base-user-accounts))
 
   
 ;; Minimal essential packages only
 
 (packages
- (append
+  (append
+  (list openresolv)
   ;; ===========================
   ;; Browser & Apps
   ;; ===========================
-  (list 
+   (list
    zen-browser-bin
    icecat
    torbrowser
@@ -510,6 +465,7 @@ EndSection"
    vulkan-tools
    vulkan-loader
    linux-firmware
+   openrgb
    )
 
   ;; ===========================
@@ -517,6 +473,7 @@ EndSection"
   ;; ===========================
   (list
    xterm
+   bustd
    xdpyinfo
    xset
    xwininfo
@@ -525,7 +482,6 @@ EndSection"
    xkill
    setxkbmap
    xmodmap
-   figlet
    xdg-utils
    xrandr
    xmonad
@@ -537,6 +493,7 @@ EndSection"
   ;; ===========================
   ( list
    lf
+   ncdu
    mergerfs
    parted
    ntfs-3g
@@ -556,6 +513,10 @@ EndSection"
   ;; Development / Build Essentials
   ;; ===========================
   (list
+   emacs
+   tdlib
+   emacs-telega
+   emacs-org
    gcc
    gcc-toolchain
    linux-libre-headers
@@ -588,6 +549,7 @@ EndSection"
   ;; Security / VPN / Cryptography
   ;; ===========================
   (list
+   apparmor
    acct
    ansible
    audit
@@ -656,6 +618,39 @@ EndSection"
    wireplumber
    )
 
+  ;; =========================
+  ;; Fonts
+  ;; =========================
+  (list
+   font-iosevka-term
+   font-iosevka-term-slab
+   font-iosevka-slab
+   font-iosevka-etoile
+   font-iosevka-curly
+   font-iosevka-curly-slab
+   font-iosevka-aile
+   font-iosevka-ss01
+   font-iosevka-ss02
+   font-iosevka-ss03
+   font-iosevka-ss04
+   font-iosevka-ss05
+   font-iosevka-ss06
+   font-iosevka-ss07
+   font-iosevka-ss08
+   font-iosevka-ss09
+   font-iosevka-ss10
+   font-iosevka-ss11
+   font-iosevka-ss12
+   font-iosevka-ss13
+   font-iosevka-ss14
+   font-iosevka-ss15
+   font-iosevka-ss16
+   font-iosevka-ss17
+   font-iosevka-ss18
+   font-sarasa-gothic
+   font-aporetic
+   font-adwaita
+)
   ;; ===========================
   ;; Base packages (Guix essentials)
   ;; ===========================
@@ -667,7 +662,10 @@ EndSection"
 (services
  (append
   (list
-   ;; AIDE Service for File Integrity (FINT-4316, FINT-4402)
+
+  ;; Fail2Ban
+  (service fail2ban-service-type)
+  ;; AIDE Service for File Integrity 
    (simple-service 'aide
                    shepherd-root-service-type
                    (list
@@ -677,7 +675,9 @@ EndSection"
                                '("/bin/sh" "-c" "/usr/bin/aide --config=/etc/aide.conf --check")))
                      (stop #~(make-kill-destructor))
                      (auto-start? #f))))
+                   
    ;; mlocate Service for Locate Database (FILE-6410)
+  
    (simple-service 'mlocate
                    shepherd-root-service-type
                    (list
@@ -698,6 +698,7 @@ EndSection"
                                  "chmod 751 /home && chmod 750 /var/lib/aide")))
                      (stop #~(make-kill-destructor))
                      (auto-start? #t))))
+                     
    ;; Bluetooth Service
    ;; Enables automatic Bluetooth device connectivity
    (service bluetooth-service-type
@@ -712,23 +713,19 @@ EndSection"
    (string-append
      "SUBSYSTEM==\"usb\", ATTR{authorized}=\"1\"\n"))
  #:groups '("plugdev"))
-   ;; NFTables Firewall
-   ;; Implements a strict firewall with input and output filtering, allowing loopback,
-   ;; established connections, Mullvad VPN (UDP port 51820), Tor (local-only),
-   ;; Avahi (mDNS on virbr0), outgoing SSH, HTTPS for Guix and web browsing,
-   ;; Steam, and Mullvad control traffic on UDP port 54347. Includes logging for dropped packets.
-   (service nftables-service-type
-            (nftables-configuration
-             (ruleset
-              (plain-file "nftables.conf" "
-# Strict firewall for privacy and security
-# Replace MULLVAD_SERVER_IP_X with IPs from https://mullvad.net/en/servers
-# Replace MULLVAD_DNS_IP with 100.64.0.23
-flush ruleset
+
+;; =============================================================================
+;; NFTABLES - STRICT
+;; =============================================================================
+(service nftables-service-type
+  (nftables-configuration
+    (ruleset
+      (plain-file "nftables.conf"
+"flush ruleset
 
 table inet filter {
-    # Anti-spoofing: Drop invalid source addresses
     chain antispoof {
+        # Anti-spoofing
         ip saddr 127.0.0.0/8 iif != lo drop
         ip6 saddr ::1 iif != lo drop
         ip saddr 0.0.0.0/8 drop
@@ -738,51 +735,91 @@ table inet filter {
 
     chain input {
         type filter hook input priority filter; policy drop;
+
         jump antispoof
-        ct state invalid drop comment \"Drop invalid connections\"
-        iif \"lo\" accept comment \"Allow all loopback traffic (including Unix sockets for X11)\"
-        ct state established,related accept comment \"Allow established connections\"
-        udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip saddr { $MULLVADVPN } tcp sport 443 ct state established limit rate 4/second accept comment \"Mullvad control\"
-        ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential ICMP\"
-        ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept comment \"Allow essential IPv6 ICMP\"
-        tcp dport { 9050, 9040 } iif \"lo\" limit rate 4/second accept comment \"Tor SOCKS and TransPort (local)\"
-        tcp flags syn / fin,syn,rst,ack limit rate 12/second accept comment \"Allow new TCP connections\"
-        tcp flags fin,psh,urg / fin,psh,urg drop comment \"Block Xmas scans\"
-        tcp flags syn,rst,ack / syn,rst drop comment \"Block invalid TCP flags\"
-        log prefix \"DROPPED_INPUT: \" level warn limit rate 5/minute drop comment \"Log dropped input\"
+
+        # Established/invalid
+        ct state invalid drop
+        ct state established,related accept
+
+        # Loopback
+        iif \"lo\" accept
+
+        # Mullvad WireGuard
+        udp dport 51820 accept
+
+        # Mullvad control servers (TCP 443)
+        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
+
+        # Tor daemon local ports
+        tcp dport {9050,9040,5353} iif \"lo\" accept
+        udp dport 5353 iif \"lo\" accept
+
+        # ICMP / ICMPv6 essential
+        ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } accept
+        ip6 nexthdr ipv6-icmp icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert, echo-request, destination-unreachable, time-exceeded } accept
+
+        # Log everything else
+        log prefix \"DROPPED_INPUT: \" level warn limit rate 5/minute drop
     }
 
     chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state invalid drop comment \"Drop invalid connections\"
-        ct state established,related accept comment \"Allow established connections\"
-        iif \"wg0-mullvad\" accept comment \"Allow VPN incoming for torrenting\"
-        oif \"wg0-mullvad\" accept comment \"Allow VPN forwarding for torrenting\"
-        log prefix \"DROPPED_FORWARD: \" level warn limit rate 5/minute drop comment \"Log dropped forward\"
+        type filter hook forward priority filter; policy drop
+        ct state invalid drop
+        ct state established,related accept
+        iif \"wg0-mullvad\" accept
+        oif \"wg0-mullvad\" accept
+        log prefix \"DROPPED_FORWARD: \" level warn limit rate 5/minute drop
     }
 
     chain output {
-        type filter hook output priority filter; policy drop;
-        ct state invalid drop comment \"Drop invalid connections\"
-        oif \"lo\" accept comment \"Allow loopback traffic (including Unix sockets for X11)\"
-        ct state established,related accept comment \"Allow established connections\"
-        udp dport 51820 limit rate 8/second accept comment \"Mullvad WireGuard\"
-        ip daddr { $MULLVADVPN } tcp dport 443 limit rate 4/second accept comment \"Mullvad control\"
-        oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 limit rate 8/second accept comment \"Mullvad DNS\"
-        oif \"wg0-mullvad\" tcp dport 443 limit rate 50/second accept comment \"HTTPS for browsing and Guix pull\"
-        oif \"wg0-mullvad\" tcp dport 9418 limit rate 10/second accept comment \"Git for Guix pull\"
-        oif \"wg0-mullvad\" { tcp dport 27015, udp dport 27015, tcp dport 27036, udp dport 27036 } ip daddr { 162.254.192.0/18, 146.66.152.0/21 } limit rate 20/second accept comment \"Steam gaming\"
-        oif \"wg0-mullvad\" { tcp dport 6881-6890, udp dport 6881-6890 } limit rate 50/second accept comment \"Torrenting\"
-        oif \"wg0-mullvad\" accept comment \"Fallback for all VPN traffic\"
-        ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept comment \"Local networks\"
-        ip6 daddr { fe80::/10, fc00::/7 } accept comment \"IPv6 local networks\"
-        log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop comment \"Log dropped output\"
+        type filter hook output priority filter; policy drop
+        ct state invalid drop
+        ct state established,related accept
+
+        # Loopback
+        oif \"lo\" accept
+
+        # Mullvad VPN
+        oif \"wg0-mullvad\" accept
+        udp dport 51820 accept  # WireGuard
+
+        # Mullvad DNS
+        oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
+
+        # Mullvad control servers
+        ip daddr {$MULLVADIP} tcp dport 443 accept
+
+        # Tor local ports
+        oif \"lo\" tcp dport {9050,9040,5353} accept
+        oif \"lo\" udp dport 5353 accept
+
+        # Tor outgoing for directory & bridges
+        oif != \"wg0-mullvad\" tcp dport {443,9001} accept
+
+        # Custom DNS (NextDNS)
+        meta l4proto {tcp, udp} th dport 53 ip daddr {45.90.28.213,45.90.30.213} accept
+        meta l4proto {tcp, udp} th dport 53 ip6 daddr {2a07:a8c0::c9:678a,2a07:a8c1::c9:678a} accept
+
+        # Steam ports
+        oif \"wg0-mullvad\" { tcp dport 27014-27050, udp dport 27000-27150 } accept
+        oif \"wg0-mullvad\" udp dport {3478,4379,4380} accept
+
+        # Torrent ports
+        oif \"wg0-mullvad\" tcp dport 6881-6999 accept
+        oif \"wg0-mullvad\" udp dport 6881-6999 accept
+
+        # Allow local networks
+        ip daddr {10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16} accept
+        ip6 daddr {fe80::/10,fc00::/7} accept
+
+        # Log everything else
+        log prefix \"DROPPED_OUTPUT: \" level warn limit rate 5/minute drop
     }
-}
-}
-"))))
-   
+}"))))
+
+
+
    ;; Blueman D-Bus Service
    ;; Provides D-Bus integration for Blueman Bluetooth manager
    (simple-service 'blueman dbus-root-service-type (list blueman))
@@ -807,10 +844,10 @@ table inet filter {
       ("QT_ENABLE_HIGHDPI_SCALING" . "0")      ; Disable Qt HiDPI scaling
       ("R600_TEX_ANISO" . "16")                ; Set anisotropic filtering for AMD GPUs
       ))
-   
+
    ;; Mullvad VPN Service
    ;; Runs the Mullvad VPN daemon for secure, private networking
-   (service mullvad-daemon-service-type)
+(service mullvad-daemon-service-type)
    
    ;; Docker Services
    ;; Enables Docker container platform and containerd runtime for containerized applications
@@ -819,32 +856,27 @@ table inet filter {
    ;; Nix Service
    ;; Integrates Nix package manager for reproducible package environments
    (service nix-service-type)
-   
+
    ;; Tor Service
    ;; Configured for transparent proxying with TransPort and DNSPort 
-   (service tor-service-type
-            (tor-configuration
-             (config-file
-              (plain-file "tor.conf" "
-# Log Tor activity (do not share logs publicly)
+(service tor-service-type
+  (tor-configuration
+    (config-file
+      (plain-file "tor.conf"
+"# Tor config - Minimal working daemon for Tor Browser
 Log notice file /var/log/tor/tor.log
-# Directory for Tor data (do not share contents)
 DataDirectory /var/lib/tor
-# SOCKS proxy port for applications
-SOCKSPort 9050
-# Transparent proxy port for traffic redirection
+SOCKSPort 127.0.0.1:9050
 TransPort 9040
-# Prevent debugger access
-DisableDebuggerAttachment 1
-# Fail if config entries are missing
-AllowMissingTorrcEntries 0
-# Map hosts to .onion addresses
+DNSPort 5353
 AutomapHostsOnResolve 1
-# Prevent acting as an exit node
 ExitPolicy reject *:*
-# Scrub sensitive info from logs
 SafeLogging 1
-"))))
+DisableDebuggerAttachment 1
+ControlPort 9051
+DisableNetwork 0"))))
+
+
    ;; Libvirt Virtualization Service
    ;; Configures libvirt for virtual machine management with Unix socket group
    ;; and TLS port for secure connections
@@ -863,13 +895,14 @@ SafeLogging 1
      (compression-algorithm 'zstd) ; Use zstd compression
      (priority 100))) ; Set swap priority
 
+
 ;; Expose Root Cache for the user Berkeley
     (service shared-cache-service-type
              (shared-cache-configuration
                (mode 'expose)  ; use 'share se for single-user confiável
                (shared-directory "/root/.cache")
                (users (list (user-cache (user "berkeley"))))))
-
+  
    ;; Custom SLiM service with Xlibre
    (service slim-service-type
             (slim-configuration
@@ -889,7 +922,7 @@ SafeLogging 1
     (theme
      (grub-theme
       (resolution '(1920 . 1080))
-      (image (local-file "/home/berkeley/wallpapers/back.png"))))))
+      (image (local-file "/home/berkeley/Photos/wallpaper.png"))))))
   
   ;; Swap Space
   ;; Defines swap space with a specific UUID and priority
@@ -920,3 +953,4 @@ SafeLogging 1
      (device (uuid "9d009d01-d635-4d56-987a-ffc2699da9fb" 'ext4))
      (type "ext4"))
     %base-file-systems)))
+

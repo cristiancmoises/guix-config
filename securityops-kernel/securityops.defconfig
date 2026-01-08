@@ -1,140 +1,117 @@
-## =======================================================================
-##  securityops-6.19rc4.defconfig
-##
-##  Custom Linux Kernel Configuration for:
-##    • AMD Ryzen 3 2200G APU (Zen 1 cores, Raven Ridge)
-##    • AMD Radeon RX 5600/5700 Series GPU (Navi 10)
-##
-##  Objectives:
-##    • Hardened kernel (KSPP + Clear Linux–style security flags)
-##    • High performance (XanMod defaults, HZ=1000, voluntary preemption)
-##    • Minimal hardware footprint (only required AMD/USB/NVMe drivers)
-##    • Retain legacy initrd model with linux-firmware only
-##
-##  Notes:
-##    - Tuned for GNU Guix System and XanMod kernel.
-##    - Boot parameters recommended: mitigations=auto,nosmt iommu=pt amd_iommu=on lsm=yama,apparmor
-##
-## =======================================================================
+# securityops.defconfig
+# Target:          AMD Ryzen 3 2200G + Navi 10 (RX 5700 series)
+# Profile:         Production – maximum hardening, LUKS, monolithic kernel
+# Boot params:     mitigations=auto nosmt amd_iommu=on iommu=pt
+#                  lsm=yama,apparmor,integrity,lockdown,landlock
+# Initrd:          linux-firmware only (+cryptsetup + IMA keys if encrypted root)
 
+# ─────────────────────────────── Base ───────────────────────────────
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_HIGH_RES_TIMERS=y
+CONFIG_HZ_1000=y                # responsive desktop
 
-# ────────────────────────────────
-#   Base Architecture
-# ────────────────────────────────
-CONFIG_64BIT=y                  # Build a 64-bit kernel
-CONFIG_X86_64=y                 # Target x86_64 architecture
-CONFIG_HIGH_RES_TIMERS=y        # High-resolution timers for precise scheduling
-CONFIG_HZ_1000=y                # Scheduler tick = 1000 Hz (low latency)
-CONFIG_PREEMPT_VOLUNTARY=y      # Voluntary preemption (balanced throughput/latency)
-CONFIG_PREEMPT_DYNAMIC=y        # Runtime switchable preemption model
-CONFIG_PREEMPT=y                # Enable kernel preemption
+# ─────────────────────────────── CPU & Scheduling ───────────────────────────────
+CONFIG_MZEN=y
+CONFIG_MNATIVE=y
+CONFIG_CPU_SUP_AMD=y
+CONFIG_X86_AMD_PLATFORM_DEVICE=y
+CONFIG_PREEMPT=y
+CONFIG_PREEMPT_DYNAMIC=y
+CONFIG_NUMA_BALANCING=y
+CONFIG_SCHED_HRTICK=y
 
+# ─────────────────────────────── Modern I/O & Network ───────────────────────────────
+CONFIG_IO_URING=y
+CONFIG_TCP_CONG_BBR=y
+CONFIG_BFQ_GROUP_IOSCHED=y
+CONFIG_NET_SCH_FQ_CODEL=y
+CONFIG_DEFAULT_FQ_CODEL=y
 
-# ────────────────────────────────
-#   CPU / Scheduler / Performance
-# ────────────────────────────────
-CONFIG_MZEN=y                   # Optimize for AMD Zen cores
-CONFIG_MNATIVE=y                # Tune for local CPU
-CONFIG_SCHED_AUTOGROUP=y        # Fair desktop scheduling
-CONFIG_SCHED_MC_PRIO=y          # Multi-core aware scheduling
-CONFIG_SCHED_SMT=y              # SMT/HyperThreading aware scheduling
-CONFIG_IRQ_TIME_ACCOUNTING=y    # Accurate CPU time accounting for interrupts
+# ─────────────────────────────── Security Hardening ───────────────────────────────
+CONFIG_SECURITY=y
+CONFIG_SECURITY_APPARMOR=y
+CONFIG_DEFAULT_SECURITY_APPARMOR=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_LOCKDOWN_LSM=y
+CONFIG_SECURITY_LANDLOCK=y
+CONFIG_LSM="yama,apparmor,integrity,lockdown,landlock"
 
+CONFIG_RANDOMIZE_BASE=y
+CONFIG_PAGE_TABLE_ISOLATION=y
+CONFIG_RETPOLINE=y
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_STACKPROTECTOR_STRONG=y
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
+CONFIG_INIT_ON_FREE_DEFAULT_ON=y
+CONFIG_REFCOUNT_FULL=y
+CONFIG_STRICT_DEVMEM=y
+CONFIG_STRICT_KERNEL_RWX=y
+CONFIG_STRICT_MODULE_RWX=y
 
-# ────────────────────────────────
-#   BPF / IO / Networking
-# ────────────────────────────────
-CONFIG_BPF=y                    # Enable Berkeley Packet Filter
-CONFIG_BPF_SYSCALL=y            # Allow user-space BPF programs
-CONFIG_BPF_JIT=y                # JIT compile BPF for speed
-CONFIG_CGROUP_BPF=y             # Attach BPF programs to cgroups
-CONFIG_IO_URING=y               # High-performance async I/O
-CONFIG_TCP_CONG_BBR=y           # Google’s BBR congestion control
-CONFIG_BFQ_GROUP_IOSCHED=y      # Fair I/O scheduler (desktop-friendly)
+CONFIG_GCC_PLUGIN_RANDSTRUCT=y
+CONFIG_RANDSTRUCT_FULL=y
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+CONFIG_SHUFFLE_PAGE_ALLOCATOR=y
+CONFIG_PAGE_TABLE_CHECK=y
+CONFIG_PAGE_TABLE_CHECK_ENFORCED=y
 
+# ─────────────────────────────── Integrity ───────────────────────────────
+CONFIG_IMA=y
+CONFIG_IMA_APPRAISE=y
+CONFIG_IMA_TRUSTED_KEYRING=y
+CONFIG_EVM=y
+CONFIG_KEYS=y
+CONFIG_TRUSTED_KEYS=y
+CONFIG_SYSTEM_TRUSTED_KEYRING=y
+CONFIG_SYSTEM_BLACKLIST_KEYRING=y
 
-# ────────────────────────────────
-#   Security Hardening
-# ────────────────────────────────
-CONFIG_HARDENED_USERCOPY=y      # Hardened copy_from/to_user checks
-CONFIG_DEBUG_RODATA=y           # Mark kernel RO data non-writable
-CONFIG_STRICT_DEVMEM=y          # Restrict /dev/mem access
-CONFIG_STRICT_KERNEL_RWX=y      # Enforce RWX permissions in kernel memory
-CONFIG_UBSAN_ALIGNMENT=y        # Undefined Behavior Sanitizer (alignment)
-CONFIG_STACKPROTECTOR_STRONG=y  # Strong stack protector
-CONFIG_FORTIFY_SOURCE=y         # Hardened compile-time memory checks
-CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y # Zero-init memory on alloc
-CONFIG_INIT_ON_FREE_DEFAULT_ON=y  # Zero-init memory on free
-CONFIG_REFCOUNT_FULL=y          # Full refcount validation
-CONFIG_RANDOMIZE_BASE=y         # Kernel ASLR
-CONFIG_PAGE_TABLE_ISOLATION=y   # Mitigate Meltdown
-CONFIG_KFENCE=y                 # Lightweight memory safety detector
-CONFIG_SECURITY=y               # Enable LSM framework
-CONFIG_SECURITYFS=y             # Security filesystem
-CONFIG_SECURITY_YAMA=y          # Yama LSM (restrict ptrace)
-CONFIG_SECURITY_APPARMOR=y      # AppArmor LSM
-CONFIG_LSM="yama,apparmor,lockdown" # Load Yama, AppArmor, Lockdown
-CONFIG_MODULE_SIG_FORCE=y       # Require signed modules
-CONFIG_MODULE_SIG_ALL=y         # Sign all modules at build
-CONFIG_MODULE_COMPRESS_ZSTD=y   # Compress modules with Zstandard
-CONFIG_RETPOLINE=y              # Spectre v2 mitigation
-CONFIG_STRICT_MODULE_RWX=y      # Enforce RWX on modules
+# ─────────────────────────────── Sandboxing ───────────────────────────────
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+# CONFIG_USER_NS=n              # strongest – enable only if containers needed
 
+# ─────────────────────────────── Monolithic kernel ───────────────────────────────
+CONFIG_MODULES=n
 
-# ────────────────────────────────
-#   Memory / Virtual Memory
-# ────────────────────────────────
-CONFIG_ZSWAP=y                  # Compressed swap cache
-CONFIG_ZSWAP_COMPRESSOR=zstd    # Use Zstandard for Zswap
-CONFIG_ZRAM=y                   # Compressed RAM block device
-CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd # Zstandard for ZRAM
-CONFIG_ZRAM_WRITEBACK=y         # Allow ZRAM writeback to disk
-CONFIG_TRANSPARENT_HUGEPAGE=y   # Transparent huge pages
-CONFIG_MGLRU=y                  # Multi-Generational LRU
+# ─────────────────────────────── Memory ───────────────────────────────
+CONFIG_ZSWAP=y
+CONFIG_ZSWAP_COMPRESSOR=zstd
+CONFIG_ZRAM=y
+CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd
+CONFIG_ZRAM_WRITEBACK=y
+CONFIG_MGLRU=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
 
+# ─────────────────────────────── Filesystems ───────────────────────────────
+CONFIG_EXT4_FS=y
+CONFIG_BTRFS_FS=y
+CONFIG_FUSE_FS=y
 
-# ────────────────────────────────
-#   Filesystems
-# ────────────────────────────────
-CONFIG_EXT4_FS=y                # EXT4 filesystem
-CONFIG_BTRFS_FS=y               # Btrfs filesystem
-CONFIG_F2FS_FS=y                # Flash-Friendly FS (SSD)
-CONFIG_XFS_FS=y                 # XFS filesystem
-CONFIG_FUSE_FS=y                # Filesystem in Userspace (FUSE)
+# ─────────────────────────────── Graphics (Navi 10) ───────────────────────────────
+CONFIG_DRM_AMDGPU=y
+CONFIG_DRM_AMDKFD=y
+CONFIG_HSA_AMD=y
 
+# ─────────────────────────────── Storage & LUKS ───────────────────────────────
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_CRYPT=y
+CONFIG_DM_VERITY=y
+CONFIG_DM_INTEGRITY=y
+CONFIG_NVME=y
+CONFIG_AHCI=y
+CONFIG_USB_STORAGE=y
 
-# ────────────────────────────────
-#   AMDGPU / DRM / Video
-# ────────────────────────────────
-CONFIG_DRM=y                    # Direct Rendering Manager
-CONFIG_DRM_AMDGPU=y             # AMD GPU driver
-CONFIG_DRM_KMS_HELPER=y         # KMS helpers
-CONFIG_DRM_TTM=y                # GPU memory management
-CONFIG_DRM_VRAM_HELPER=y        # VRAM helpers
-CONFIG_DRM_AMDKFD=y             # Kernel Fusion Driver (ROCm/HSA)
-CONFIG_AMDKFD_KCQ=y             # Kernel Command Queue
-CONFIG_HSA_AMD=y                # HSA AMD support
-CONFIG_DRM_VCN=y                # Video Codec Next (modern)
-CONFIG_DRM_VCE=y                # Video Codec Engine (legacy)
-CONFIG_DRM_UVD=y                # Unified Video Decoder (legacy)
-CONFIG_DRM_VESA=y               # VESA framebuffer fallback
+# ─────────────────────────────── Crypto (LUKS + IMA minimal set) ───────────────────────────────
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_XTS=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_CHACHA20=y
+CONFIG_CRYPTO_POLY1305=y
 
-
-# ────────────────────────────────
-#   Storage / USB / NVMe
-# ────────────────────────────────
-CONFIG_ATA=y                    # ATA support
-CONFIG_AHCI=y                   # AHCI SATA controller
-CONFIG_SCSI=y                   # SCSI subsystem
-CONFIG_USB_UAS=y                # USB Attached SCSI
-CONFIG_USB_STORAGE=y            # USB mass storage
-CONFIG_NVME_CORE=y              # NVMe core
-CONFIG_NVME=y                   # NVMe block device
-
-
-# ────────────────────────────────
-#   Debugging / Development Tools
-# ────────────────────────────────
-CONFIG_DEBUG_KERNEL=y           # Kernel debugging features
-CONFIG_DEBUG_INFO=y             # Build with debug info
-CONFIG_DEBUG_INFO_DWARF5=y      # Use DWARF v5 format
+# ─────────────────────────────── AMD IOMMU ───────────────────────────────
+CONFIG_IOMMU_SUPPORT=y
+CONFIG_AMD_IOMMU=y
+CONFIG_AMD_IOMMU_V2=y

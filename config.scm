@@ -64,6 +64,7 @@
  (gnu packages firmware)       ; Firmware packages
  (gnu packages i2p)           ; I2P anonymous network packages
  (gnu packages telegram)
+ (gnu packages ncdu)
  (gnu packages photo)          ; Photography-related packages
  (gnu packages kde-utils)      ; KDE utility packages
  (gnu packages algebra)        ; Algebra-related packages
@@ -227,12 +228,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.19-rc4") 
+    (version "6.18.4") 
     (source (origin
               (method url-fetch)
-              (uri "https://git.kernel.org/torvalds/t/linux-6.19-rc4.tar.gz") ;;  :)
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.4.tar.xz") ;;  :)
               (sha256
-               (base32 "052bwfh8fh0dv6g24rf6alajm4r1n13sc6pnbvqly7byby9wsfnm"))))
+               (base32 "1asza9m4vb7lghxaiy5fpnbwmb9a44pgjclbpgv1p77plnf16l7q"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -359,92 +360,45 @@ EndSection"
 
   ;; Kernel Settings
 (kernel securityops)
-  (kernel-arguments
-   '(
-     ;; ─── Boot and General ─────────────────────────────────────────────
-     "quiet"                           ; Minimize boot output
-     "splash"                          ; Graphical splash screen
-     "noatime"                         ; Disable file access time updates
-     ;; ─── Memory Compression ───────────────────────────────────────────
-     "zswap.enabled=1"                ; Enable zswap
-     "zswap.compressor=zstd"          ; Zstandard compression
-     "zswap.max_pool_percent=15"      ; Limit zswap to 15% of RAM
-     "zswap.zpool=z3fold"             ; Z3fold allocator
-     "zswap.accept_threshold_percent=90" ; Compress at 90% memory usage
-     "zswap.same_filled_pages_enabled=1" ; Deduplicate pages
-     ;; ─── I/O and Filesystem ──────────────────────────────────────────
-     "elevator=bfq"                   ; BFQ scheduler
-     "rootflags=data=ordered"         ; Ordered journaling
-     "fsck.mode=auto"                 ; Auto filesystem checks
-     "fsck.repair=preen"              ; Safe repairs
-     "vm.dirty_writeback_centisecs=1000" ; Flush dirty pages every 10s
-     ;; ─── CPU and Memory Security ─────────────────────────────────────
-     "module.sig_enforce=1"           ; Enforce signed modules
-     "kptr_restrict=2"                ; Hide kernel pointers
-     "lockdown=confidentiality"       ; Kernel lockdown
-     "slab_nomerge"                   ; Prevent slab merging
-     "page_alloc.shuffle=1"           ; Randomize page allocator
-     "random.trust_cpu=off"           ; Disable CPU RNG trust
-     "preempt=full"                   ; Full preemption
-     "sched_yield_type=2"             ; Aggressive yield
-     "transparent_hugepage=always"    ; Enable hugepages
-     "vsyscall=none"                  ; Disable vsyscall
-     "randomize_kstack_offset=on"     ; Randomize kernel stack
-     ;; ─── Security Mitigations ────────────────────────────────────────
-     "mitigations=auto"               ; Auto-apply CPU mitigations
-     "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
-     "mce=1"                          ; Machine Check Exception handling
-     ;; ─── USB Security ───────────────────────────────────────────────
-     ; "usbcore.authorized_default=0"  ; Disable auto-authorizing USB devices (anti-badusb)
-     ;; ─── Networking Optimizations ───────────────────────────────────
-     "tcp_congestion_control=bbr"     ; Use BBR for efficient TCP congestion control
-     "net.core.default_qdisc=fq_codel" ; Use fq_codel for fair network queuing
-     "net.ipv4.tcp_fq_codel_quantum=1000" ; Set fq_codel quantum for TCP
-     "net.ipv4.tcp_fq_codel_target=5000"  ; Set fq_codel target latency
-     "net.ipv4.tcp_ecn=1"             ; Enable Explicit Congestion Notification
-     "net.ipv4.tcp_fastopen=3"        ; Enable TCP Fast Open for faster connections
-     "net.core.netdev_max_backlog=10000" ; Increase network device backlog
-     "net.core.rmem_max=16777216"     ; Increase receive buffer size
-     "net.core.wmem_max=16777216"     ; Increase send buffer size
-     "net.ipv4.tcp_rmem=4096 87380 16777216" ; Set TCP receive buffer sizes
-     "net.ipv4.tcp_wmem=4096 65536 16777216" ; Set TCP send buffer sizes
-     "net.ipv4.tcp_mtu_probing=1"     ; Enable MTU probing for TCP
-     "net.core.optmem_max=131072"     ; Increase socket option memory
-     "net.ipv4.tcp_window_scaling=1"  ; Enable TCP window scaling
-     "net.ipv4.tcp_sack=1"            ; Enable Selective Acknowledgments
-     "net.ipv4.tcp_early_retrans=3"   ; Enable early retransmission for TCP
-     "net.ipv4.tcp_thin_linear_timeouts=1" ; Optimize TCP timeouts
-     "ipv6.disable=0"                 ; Enable IPv6 support
-     ;; ─── AMD GPU Tuning ─────────────────────────────────────────────
-     ;"amdgpu.ppfeaturemask=0xffffffff" ; Unlock all features
-     ;"amdgpu.dc=0"                    ; Enable Display Core
-     ;"amdgpu.dpm=0"                   ; Dynamic Power Management
-     ;"amdgpu.aspm=1"                  ; Active State Power Management
-     ;"amdgpu.gpu_recovery=1"          ; GPU recovery
-     ;"amdgpu.mcbp=1"                  ; Mid-chain bus power
-     ;"amdgpu.dcfeaturemask=0xffffffff" ; All Display Core features
-     "amdgpu.sched_policy=2"          ; High-priority scheduling
-     "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
-     "amdgpu.backlight=0"             ; Disable backlight control
-     ;"amdgpu.runpm=1"                 ; Enable runtime power management
-     "h264_amf=1"                     ; H.264 encoding
-     ;; ─── Power and Performance ──────────────────────────────────────
-     "irqaffinity=1-3"                ; IRQs on CPUs 1-3
-     "cpufreq.default_governor=schedutil" ; Schedutil scaling
-     "amd_pstate=active"              ; AMD P-state driver
-     "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
-     ;; ─── IOMMU and Virtualization ───────────────────────────────────
-     "amd_iommu=on"                   ; Enable AMD IOMMU
-     "iommu=pt"                       ; Passthrough mode
-     ;; ---- SELINUX ----------------------------------------------------
-     "apparmor=1"
-     "security=apparmor"
-     ;; ─── System Behavior ────────────────────────────────────────────
-     "noirqdebug"                     ; Disable IRQ debugging
-     "watchdog"                       ; Hardware watchdog
-     "noreplace-smp"                  ; Prevent SMP code replacement
-     "sysrq_always_enabled=1"         ; Enable SysRq
-     "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
+(kernel-arguments
+ '("quiet"                          ; minimize boot messages
+   "splash"                         ; show graphical boot splash
+   "noatime"                        ; disable access time updates (perf + SSD life)
+   "mitigations=auto"               ; apply all available CPU vulnerability mitigations
+   "nosmt"                          ; disable SMT (hyper-threading) – strongest Spectre/MDS protection
+   "amd_iommu=on"                   ; enable AMD IOMMU for DMA protection
+   "iommu=pt"                       ; IOMMU passthrough mode (performance + security)
+   "lsm=yama,apparmor,integrity,lockdown,landlock" ; strict LSM order
+   "apparmor=1"                     ; force AppArmor activation
+   "security=apparmor"              ; set AppArmor as primary security module
+   "lockdown=confidentiality"       ; strongest kernel lockdown mode
+   "module.sig_enforce=1"           ; require all modules to be signed
+   "slab_nomerge"                   ; prevent slab cache merging (heap isolation)
+   "page_alloc.shuffle=1"           ; randomize page allocator freelist
+   "init_on_alloc=1"                ; zero memory on allocation (use-after-free protection)
+   "init_on_free=1"                 ; zero memory on free (use-after-free protection)
+   "kptr_restrict=2"                ; hide all kernel pointers from unprivileged users
+   "randomize_kstack_offset=on"     ; randomize kernel stack offset (stack clash mitigation)
+   "vsyscall=none"                  ; disable legacy vsyscall page (attack surface reduction)
+   "preempt=full"                   ; full kernel preemption (best responsiveness)
+   "amd_pstate=active"              ; enable modern AMD P-state driver
+   "tcp_congestion_control=bbr"     ; use BBR TCP congestion control (best performance)
+   "net.core.default_qdisc=fq_codel" ; fair queuing + CoDel (low latency network)
+   "random.trust_cpu=off"           ; do not trust CPU hardware RNG (extra entropy caution)
+   "spec_store_bypass_disable=prctl" ; Spectre v4 mitigation
+   "mce=1"                          ; Machine Check Exception handling
+   "amdgpu.sched_policy=2"          ; High-priority AMD GPU scheduling
+   "amdgpu.abmlevel=0"              ; Disable Adaptive Backlight
+   "amdgpu.backlight=0"             ; Disable backlight control
+   "h264_amf=1"                     ; H.264 encoding
+   "irqaffinity=1-3"                ; IRQs on CPUs 1-3
+   "cpufreq.default_governor=schedutil" ; Schedutil scaling
+   "rcu_nocbs=0-3"                  ; Offload RCU from all CPUs
+   "noirqdebug"                     ; Disable IRQ debugging
+   "watchdog"                       ; Hardware watchdog
+   "noreplace-smp"                  ; Prevent SMP code replacement
+   "modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc" ; Blacklist dangerous modules
+   ))
 
   (initrd microcode-initrd)
 
@@ -539,6 +493,7 @@ EndSection"
   ;; ===========================
   ( list
    lf
+   ncdu
    mergerfs
    parted
    ntfs-3g
@@ -794,7 +749,7 @@ table inet filter {
         udp dport 51820 accept
 
         # Mullvad control servers (TCP 443)
-        ip saddr {$MULLVAD} tcp sport 443 ct state established accept
+        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
 
         # Tor daemon local ports
         tcp dport {9050,9040,5353} iif \"lo\" accept
@@ -833,7 +788,7 @@ table inet filter {
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
 
         # Mullvad control servers
-        ip daddr {$MULLVAD} tcp dport 443 accept
+        ip daddr {$MULLVADIP} tcp dport 443 accept
 
         # Tor local ports
         oif \"lo\" tcp dport {9050,9040,5353} accept
