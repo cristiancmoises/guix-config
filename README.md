@@ -197,10 +197,13 @@ Very hard attack surface
 Pleasant daily driver
 Strong privacy defaults
 Modern AMD optimized
+---
 
 Maintainer: [Cristian Cezar Moisés](https://linkedin.com/in/cristiancezarmoises)
 License: GNU GPL-3.0
 Last update: January 08, 2026
 Videos → https://youtube.com/@securityops
+
+---
 
 For more information about my project -> [Security Ops - Wiki](https://wiki.securityops.co)
