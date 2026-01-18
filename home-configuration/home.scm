@@ -88,6 +88,8 @@
  (gnu packages ruby-xyz)
  (gnu packages compton)
  (gnu packages sqlite)
+ (gnu packages wine)
+ (nongnu packages wine)
  (gnu packages password-utils)
  (gnu packages python-build)
  (gnu packages unicode)
@@ -293,6 +295,8 @@
    vlc
    steam
    lutris
+   wine
+   winetricks
    luanti
    luanti-server
    pcsx2
