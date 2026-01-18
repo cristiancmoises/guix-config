@@ -890,20 +890,21 @@ table inet filter {
 (service tor-service-type
   (tor-configuration
     (config-file
-      (plain-file "tor.conf"
-"# Tor config - Minimal working daemon for Tor Browser
-Log notice file /var/log/tor/tor.log
+      (plain-file "torrc"
+        "Log notice stderr
 DataDirectory /var/lib/tor
+
 SOCKSPort 127.0.0.1:9050
+ControlPort 9051
 TransPort 9040
 DNSPort 5353
+
+VirtualAddrNetwork 10.192.0.0/10
 AutomapHostsOnResolve 1
 ExitPolicy reject *:*
 SafeLogging 1
 DisableDebuggerAttachment 1
-ControlPort 9051
-DisableNetwork 0"))))
-
+"))))
 
    ;; Libvirt Virtualization Service
    ;; Configures libvirt for virtual machine management with Unix socket group
