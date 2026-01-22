@@ -228,12 +228,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.18.5") 
+    (version "6.18.6") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.5.tar.xz") ;;  :)
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.6.tar.xz") ;;  :)
               (sha256
-               (base32 "0h6r5w7755gd8ys18zi9rgw95wrd2yalbq0h88ihv3ggki01z78q"))))
+               (base32 "06x3z649mzwwkb1hvsy0yh7j5jk9qrnwqcmwy7dx8s1ggccrf927"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -777,7 +777,7 @@ table inet filter {
         udp dport 51820 accept
 
         # Mullvad control servers (TCP 443)
-        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
+        ip saddr {$MULLVAD} tcp sport 443 ct state established accept
 
         # Tor daemon local ports
         tcp dport {9050,9040,5353} iif \"lo\" accept
@@ -816,7 +816,7 @@ table inet filter {
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
 
         # Mullvad control servers
-        ip daddr {$MULLVADIP} tcp dport 443 accept
+        ip daddr {$MULLVAD} tcp dport 443 accept
 
         # Tor local ports
         oif \"lo\" tcp dport {9050,9040,5353} accept

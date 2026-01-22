@@ -60,6 +60,7 @@
  (gnu packages luanti)
  (rosenthal packages web)
  (gnu packages nss)
+ (gnu packages maths)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
  (gnu home-services wm)        ; Window manager home services
@@ -234,6 +235,7 @@
    python                       ; Python
    python-pip                   ; Python package manager
    python-emoji                 ; Emoji support
+   python-virtualenv
    certbot
    rust                         ; Rust
    node                         ; Node.js runtime
@@ -453,7 +455,8 @@
    higan
    qbittorrent
    at-spi2-core                   ; Accessibility
-   )
+   calc 
+  )
 
   ;; ===========================
   ;; Fonts
