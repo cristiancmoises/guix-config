@@ -15,7 +15,7 @@
 **Hardened • Minimal • Private • Fast** 
 Declarative GNU Guix system - AMD Ryzen 2200G + Radeon RX 5600/5700
 
-**Kernel:** Custom SecurityOps 6.18.4 (KSPP + XanMod + Clear Linux + extreme hardening)
+**Kernel:** Custom SecurityOps 6.18.8 (KSPP + XanMod + Clear Linux + extreme hardening)
 
 <br>
 
@@ -29,7 +29,7 @@ Declarative GNU Guix system - AMD Ryzen 2200G + Radeon RX 5600/5700
 - Steam • Proton • MangoHud • VAAPI/Vulkan  
 - 4 GB zswap (zstd) • BBR • fq_codel  
 - Docker + QEMU
-
+- 2 versions of the system: Xlibre and Sway
 <br>
 
 ## 📸 Screenshots

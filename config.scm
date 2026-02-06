@@ -83,12 +83,14 @@
  (gnu packages tor-browsers)   ; Tor browser packages
  (small-guix packages mullvad) ; Mullvad VPN packages
  (radix packages linux)        ; Bustd
- (radix packages admin)
+ (longdong packages admin)
+ (longdong packages disk)
+ (longdong packages disks)
  (gnu packages ntp)
  (gnu packages dns)
  (gnu services admin)          ; Admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
- (radix packages image-viewers); Custom image viewer packages
+ (longdong packages image-viewers) ; Custom image viewer packages
  (saayix packages binaries)    ; Custom binary packages
  (guix store)                  ; Guix store management
  (guix packages)               ; Guix package management
@@ -110,7 +112,7 @@
  (gnu packages ebook)          ; Ebook-related packages
  (gnu packages lisp-xyz)       ; Lisp-related packages
  (gnu packages rust-apps)      ; Rust application packages
- (rde features bluetooth)      ; Bluetooth feature definitions
+ ;(rde features bluetooth)      ; Bluetooth feature definitions
  (gnu packages monitoring)
  (gnu packages jami)           ; Jami secure communication packages
  (gnu packages suckless)       ; Suckless software packages
@@ -150,7 +152,7 @@
  (gnu packages base)           ; Base system packages
  (gnu packages xfce)           ; XFCE desktop environment packages
  (srfi srfi-1)                 ; SRFI-1 list library
- (gnu packages tor)            ; Tor anonymity network packages
+ (longdong packages tor)            ; Tor anonymity network packages
  (gnu packages image-viewers)  ; Image viewer packages
  (gnu packages messaging)      ; Messaging-related packages
  (gnu packages vim)            ; Vim editor packages
@@ -165,14 +167,13 @@
  (gnu services shepherd)       ; Shepherd init system services
  (gnu system shadow)           ; Shadow password management
  (gnu services configuration)  ; Service configuration utilities
- (gnu services xorg)           ; Xlibre
  (gnu packages build-tools)    ; Build tool packages
  (gnu packages admin)          ; Admin-related packages
  (gnu packages qt)             ; Qt framework packages
  (gnu packages lxde)           ; LXDE desktop environment packages
  (gnu packages python)         ; Python programming language packages
  (gnu packages bittorrent)     ; BitTorrent-related packages
- (gnu packages chromium)       ; Chromium browser packages
+ (longdong packages chromium)       ; Chromium browser packages
  (gnu packages compression)    ; Compression-related packages
  (gnu packages ncurses)        ; Ncurses library packages
  (gnu packages web)            ; Web-related packages
@@ -199,11 +200,9 @@
  (gnu packages wm)             ; Window manager packages
  (nongnu packages benchmark)   ; Non-GNU benchmark packages
  (gnu packages benchmark)      ; GNU benchmark packages
- (gnu packages xdisorg)        ; X11 display organization packages
  (gnu packages xorg)           ; Xorg server and related packages
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
- (gnu home-services wm)        ; Window manager home services
  (small-guix services mullvad) ; Mullvad VPN services
  (gnu packages lisp)           ; Lisp programming language packages
  (gnu packages networking)     ; Networking-related packages
@@ -218,120 +217,27 @@
 
 ;; Import service modules for system services
 (use-service-modules
- guix base web security sysctl networking certbot shepherd nix cups desktop ssh docker xorg linux virtualization)
+ guix base web security sysctl networking certbot shepherd nix cups desktop ssh docker linux virtualization)
 
 ;; Import package modules for package management tools
 (use-package-modules
- bootloaders package-management version-control gcc bash certs admin linux xorg)
+ bootloaders package-management version-control gcc bash certs admin linux )
 
 (define-public securityops
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.18.6") 
+    (version "6.18.8") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.6.tar.xz") ;;  :)
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.8.tar.xz") ;;  :)
               (sha256
-               (base32 "06x3z649mzwwkb1hvsy0yh7j5jk9qrnwqcmwy7dx8s1ggccrf927"))))
+               (base32 "1zwczw98ylqa3nhlqnvjbylaaqg8jn3z0j3xx02ddha2qbawbw1p"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
        ;; Keep all default phases
        ((#:phases phases) phases)))))
-
-;; -------------------------------------------------------------------
-;; XLibre Configuration for AMDGPU with native resolution 1366x768
-;; Description: Optimized configuration for AMDGPU using XLibre with
-;;              Glamor acceleration, TearFree, DRI3, and adaptive
-;;              flip/page-flip options. Keyboard layout set to Brazilian.
-;;
-;; Description:
-;;   This configuration is for a single-monitor setup using an AMDGPU-based
-;;   graphics card with XLibre (X.Org replacement). It is optimized for:
-;;     - Native resolution: 1366x768
-;;     - Tear-free experience
-;;     - Smooth animations using triple buffering
-;;     - Adaptive refresh and DRI3 support
-;;     - Glamor acceleration for 2D and 3D
-;;
-;; Sections:
-;;   1. Device
-;;      - Identifies the GPU device and sets performance/display options.
-;;      - Key options:
-;;          TearFree: Prevents tearing on fast-moving content
-;;          AccelMethod: Uses Glamor 2D acceleration
-;;          DRI: Uses DRI3 for faster rendering
-;;          TripleBuffer: Reduces stutter in animations
-;;          ShadowPrimary: Helps reduce tearing
-;;          ColorTiling / ColorTiling2D: Optimize memory layout for 2D/3D rendering
-;;          AsyncFlipSecondaries / EnablePageFlip: Improve display flips performance
-;;          SwapbuffersWait: Wait for sync for smoother frame presentation
-;;          AllowGLXWithComposite: Allow GLX apps with compositing managers
-;;
-;;   2. Monitor
-;;      - Defines the connected monitor, its sync ranges, and preferred resolution.
-;;      - DPMS: Enables Display Power Management Signaling (power saving)
-;;
-;;   3. Screen
-;;      - Connects GPU device to monitor
-;;      - Defines default color depth and display modes
-;;
-;; Notes:
-;;   - Keyboard layout is set to Brazilian (br)
-;;   - This configuration is designed for a single HDMI monitor.
-;;   - All X11 configuration is contained in 'extra-config' to avoid external
-;;     xorg.conf files.
-;;   - Ensure this configuration is loaded by XLibre at startup to avoid
-;;     resolution or tearing issues.
-
-(define my-xlibre-config
-  (xlibre-configuration
-    (modules (list xlibre-video-amdgpu xlibre-input-libinput))
-    (drivers '("amdgpu"))
-    (keyboard-layout (keyboard-layout "br"))
-    
-    (extra-config
-     (list
- "Section \"Device\"\n\
-    Identifier \"AMD-GPU\"\n\
-    Driver \"amdgpu\"\n\
-    Option \"TearFree\" \"on\"\n\
-    Option \"AccelMethod\" \"glamor\"\n\
-    Option \"DRI\" \"3\"\n\
-    Option \"VariableRefresh\" \"true\"\n\
-    Option \"AsyncFlipSecondaries\" \"true\"\n\
-    Option \"EnablePageFlip\" \"true\"\n\
-    Option \"ShadowPrimary\" \"true\"\n\
-    Option \"ColorTiling\" \"true\"\n\
-    Option \"ColorTiling2D\" \"true\"\n\
-    Option \"EnableDepthMoves\" \"true\"\n\
-    Option \"SwapbuffersWait\" \"true\"\n\
-    Option \"AllowGLXWithComposite\" \"true\"\n\
-    Option \"TripleBuffer\" \"true\"\n\
-    Option \"DRI3SwapEvent\" \"true\"\n\
-    Option \"AutoAddDevices\" \"false\"\n\
-EndSection\n\
-Section \"Monitor\"\n\
-    Identifier \"HDMI-A-0\"\n\
-    HorizSync 30.0-83.0\n\
-    VertRefresh 56.0-76.0\n\
-    Option \"PreferredMode\" \"1366x768\"\n\
-    Option \"DPMS\" \"true\"\n\
-EndSection\n\
-Section \"Screen\"\n\
-    Identifier \"Screen0\"\n\
-    Device \"AMD-GPU\"\n\
-    Monitor \"HDMI-A-0\"\n\
-    DefaultDepth 32\n\
-    SubSection \"Display\"\n\
-        Depth 32\n\
-        Modes \"1366x768\"\n\
-    EndSubSection\n\
-EndSection"
- ))))
-
-
 
 (define my-env-vars
   (simple-service
@@ -480,9 +386,15 @@ EndSection"
    acpi-call-linux-module
    util-linux
    v4l2loopback-linux-module
-   xlibre-server
-   xlibre-input-libinput
-   xlibre-video-amdgpu
+ ;  xlibre-server
+ ;  xlibre-input-libinput
+ ;  xlibre-video-amdgpu
+   sway
+   waybar
+   wl-clipboard
+   brightnessctl
+   swayidle
+   swaylock
    amd-microcode
    amdgpu-firmware
    mesa
@@ -500,13 +412,12 @@ EndSection"
   ;; X Utilities (Essential)
   ;; ===========================
   (list
-   xterm
    bustd
-   xdpyinfo
-   xset
-   xwininfo
-   xprop
-   xpra
+   ;xdpyinfo
+   ;xset
+   ;xwininfo
+   ;xprop
+   ;xpra
    xkill
    setxkbmap
    xmodmap
@@ -564,8 +475,8 @@ EndSection"
    binutils
    strace
    edk2-tools
-   kitty
    alacritty
+   foot
    fish
    bat
    zoxide
@@ -587,7 +498,6 @@ EndSection"
    gnupg
    libfido2
    firejail
-   privoxy
    openvpn
    tor
    torsocks
@@ -688,7 +598,7 @@ EndSection"
 ;; This section configures essential system services for connectivity, security,
 ;; input methods, virtualization, and desktop integration.
 (services
- (append
+ (append %desktop-services
   (list
 
   ;; Fail2Ban
@@ -777,7 +687,7 @@ table inet filter {
         udp dport 51820 accept
 
         # Mullvad control servers (TCP 443)
-        ip saddr {$MULLVAD} tcp sport 443 ct state established accept
+        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
 
         # Tor daemon local ports
         tcp dport {9050,9040,5353} iif \"lo\" accept
@@ -816,7 +726,7 @@ table inet filter {
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
 
         # Mullvad control servers
-        ip daddr {$MULLVAD} tcp dport 443 accept
+        ip daddr {$MULLVADIP} tcp dport 443 accept
 
         # Tor local ports
         oif \"lo\" tcp dport {9050,9040,5353} accept
@@ -838,7 +748,7 @@ table inet filter {
         oif \"wg0-mullvad\" udp dport 6881-6999 accept
 
         # Allow local networks
-        ip daddr {10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16} accept
+        ip daddr {$LOCAL} accept
         ip6 daddr {fe80::/10,fc00::/7} accept
 
         # Log everything else
@@ -924,24 +834,15 @@ DisableDebuggerAttachment 1
      (compression-algorithm 'zstd) ; Use zstd compression
      (priority 100))) ; Set swap priority
 
+(service shared-cache-service-type
+  (shared-cache-configuration
+    (mode 'expose)
+    (shared-directory "/root/.cache")
+    (users (list (user-cache (user "berkeley"))))))
 
-;; Expose Root Cache for the user Berkeley
-    (service shared-cache-service-type
-             (shared-cache-configuration
-               (mode 'expose)  ; use 'share se for single-user confiável
-               (shared-directory "/root/.cache")
-               (users (list (user-cache (user "berkeley"))))))
-  
-   ;; Custom SLiM service with Xlibre
-   (service slim-service-type
-            (slim-configuration
-              (auto-login? #f)
-              (default-user "berkeley")
-              (xorg-configuration my-xlibre-config))))
- (modify-services
-  %desktop-services
-  (delete gdm-service-type))))
-  
+))) 
+
+
   ;; Bootloader Configuration
   ;; Configures GRUB bootloader with a custom theme and 1920x1080 resolution
   (bootloader
@@ -965,6 +866,9 @@ DisableDebuggerAttachment 1
   ;; Defines mounted filesystems, including EFI, root, and additional partitions
   (file-systems
    (cons*
+
+
+
     (file-system
      (mount-point "/boot/efi")
      (device (uuid "02E2-0AB2" 'fat32))
@@ -973,10 +877,10 @@ DisableDebuggerAttachment 1
      (mount-point "/")
      (device (uuid "38467002-a282-4387-8319-cff6d93cd23b" 'ext4))
      (type "ext4"))
-    (file-system
-     (mount-point "/files")
-     (device (uuid "7b2cbf88-bc71-49ad-b2fa-a4bbdb71f886" 'ext4))
-     (type "ext4"))
+   (file-system
+    (mount-point "/files")
+    (device (uuid "7b2cbf88-bc71-49ad-b2fa-a4bbdb71f886" 'ext4))
+    (type "ext4"))
     (file-system
      (mount-point "/mnt/games")
      (device (uuid "9d009d01-d635-4d56-987a-ffc2699da9fb" 'ext4))
