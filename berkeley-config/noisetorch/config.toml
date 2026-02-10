@@ -1,0 +1,7 @@
+Threshold = 36
+DisplayMonitorSources = true
+EnableUpdates = true
+FilterInput = true
+FilterOutput = false
+LastUsedInput = "alsa_input.pci-0000_0b_00.6.analog-stereo"
+LastUsedOutput = ""

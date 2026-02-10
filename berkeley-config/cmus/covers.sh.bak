@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# ~/.config/cmus/covers.sh
+# FINAL VERSION — CORRECT POSITION + NO OVERLAP + BLACK BG
+
+set -euo pipefail
+
+FEH="$(command -v feh)" || exit 0
+CLASS="cmus_cover_right"
+CACHE="/tmp/cmus-cover-${USER}"
+
+# 300×300 cover, 30px from right edge, 80px from top → NEVER overlaps cmus
+GEOMETRY="100x100-10+10"
+
+# Get current track
+TRACK="$(cmus-remote -Q 2>/dev/null | grep '^file ' | cut -d' ' -f2-)" || exit 0
+DIR="$(dirname "$TRACK")"
+
+# Find cover
+ART=""
+for f in "$DIR"/{cover,folder,front,album}.{png,jpg,jpeg,webp} "$DIR"/*.{png,jpg,jpeg,webp}; do
+    [[ -f "$f" ]] && ART="$f" && break
+done
+[[ -z "$ART" ]] && ART="$(find "$DIR" -maxdepth 2 \( -iname 'cover.*' -o -iname 'folder.*' -o -iname 'front.*' \) -print -quit 2>/dev/null || true)"
+
+# No art → kill window
+if [[ -z "$ART" || ! -f "$ART" ]]; then
+    pkill -f "feh.*--class $CLASS" 2>/dev/null || true
+    rm -f "$CACHE" 2>/dev/null || true
+    exit 0
+fi
+
+# Kill old window instantly
+pkill -f "feh.*--class $CLASS" 2>/dev/null || true
+sleep 0.05
+
+# Launch on RIGHT side only — NEVER over cmus
+"$FEH" \
+  -g "$GEOMETRY" \
+  --class "$CLASS" \
+  --borderless \
+  --auto-zoom \
+  --image-bg black \
+  --no-fehbg \
+  --title "cmus-cover-right" \
+  "$ART" >/dev/null 2>&1 &
+
+echo "$!" > "$CACHE"

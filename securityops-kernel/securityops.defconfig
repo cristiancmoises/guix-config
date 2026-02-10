@@ -1,0 +1,172 @@
+#
+# =========================
+#  securityops.defconfig
+# =========================
+# Target: AMD Ryzen 3 2200G (Zen 1) + AMD Navi 10 (RX 5700)
+# Profile: Production – Hardened, Monolithic, IMA/EVM, Guix
+#
+
+# ─────────────────────────────── Architecture ───────────────────────────────
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_X86=y
+CONFIG_X86_MCE=y
+CONFIG_X86_MCE_AMD=y
+CONFIG_X86_AMD_PLATFORM_DEVICE=y
+
+# ─────────────────────────────── Timers & Scheduling ───────────────────────────────
+CONFIG_HIGH_RES_TIMERS=y
+CONFIG_HZ_1000=y
+CONFIG_SCHED_HRTICK=y
+CONFIG_NUMA_BALANCING=y
+
+CONFIG_PREEMPT_DYNAMIC=y
+CONFIG_PREEMPT_VOLUNTARY=y
+CONFIG_SCHED_STACK_END_CHECK=y
+
+# ─────────────────────────────── CPU Optimizations ───────────────────────────────
+CONFIG_MZEN=y
+CONFIG_MNATIVE=y
+CONFIG_CPU_SUP_AMD=y
+CONFIG_X86_FEATURE_NAMES=y
+
+# ─────────────────────────────── Speculative Execution Mitigations ───────────────────────────────
+CONFIG_PAGE_TABLE_ISOLATION=y
+CONFIG_RETPOLINE=y
+CONFIG_CPU_MITIGATIONS=y
+
+# ─────────────────────────────── Core Security Framework ───────────────────────────────
+CONFIG_SECURITY=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_APPARMOR=y
+CONFIG_DEFAULT_SECURITY_APPARMOR=y
+CONFIG_SECURITY_LOCKDOWN_LSM=y
+CONFIG_SECURITY_LANDLOCK=y
+CONFIG_LSM="yama,apparmor,integrity,lockdown,landlock"
+
+# ─────────────────────────────── Kernel Lockdown ───────────────────────────────
+CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y
+
+# ─────────────────────────────── Memory Safety & Hardening ───────────────────────────────
+CONFIG_RANDOMIZE_BASE=y
+CONFIG_STACKPROTECTOR_STRONG=y
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_REFCOUNT_FULL=y
+
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
+CONFIG_INIT_ON_FREE_DEFAULT_ON=y
+
+CONFIG_STRICT_KERNEL_RWX=y
+CONFIG_STRICT_MODULE_RWX=y
+CONFIG_STRICT_DEVMEM=y
+
+CONFIG_BUG_ON_DATA_CORRUPTION=y
+CONFIG_DEBUG_WX=y
+CONFIG_VMAP_STACK=y
+
+# ─────────────────────────────── Slab / Heap Hardening ───────────────────────────────
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+CONFIG_SHUFFLE_PAGE_ALLOCATOR=y
+
+# ─────────────────────────────── Page Table Protection ───────────────────────────────
+CONFIG_PAGE_TABLE_CHECK=y
+CONFIG_PAGE_TABLE_CHECK_ENFORCED=y
+
+# ─────────────────────────────── GCC Hardening Plugins ───────────────────────────────
+CONFIG_GCC_PLUGIN_RANDSTRUCT=y
+CONFIG_RANDSTRUCT_FULL=y
+
+# ─────────────────────────────── Integrity Subsystem (IMA / EVM) ───────────────────────────────
+CONFIG_IMA=y
+CONFIG_IMA_APPRAISE=y
+CONFIG_IMA_TRUSTED_KEYRING=y
+CONFIG_IMA_DEFAULT_HASH_SHA256=y
+
+CONFIG_EVM=y
+CONFIG_EVM_ATTR_FSUUID=y
+CONFIG_EVM_EXTRA_SMACK_XATTRS=n
+
+CONFIG_KEYS=y
+CONFIG_TRUSTED_KEYS=y
+CONFIG_SYSTEM_TRUSTED_KEYRING=y
+CONFIG_SYSTEM_BLACKLIST_KEYRING=y
+
+# ─────────────────────────────── Sandboxing & Syscall Filtering ───────────────────────────────
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+CONFIG_USER_NS=y
+
+# ─────────────────────────────── Kernel Model ───────────────────────────────
+CONFIG_MODULES=n
+
+# ─────────────────────────────── Memory Management ───────────────────────────────
+CONFIG_MGLRU=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
+
+CONFIG_ZSWAP=y
+CONFIG_ZSWAP_COMPRESSOR=zstd
+
+CONFIG_ZRAM=y
+CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd
+CONFIG_ZRAM_WRITEBACK=y
+
+# ─────────────────────────────── Filesystems ───────────────────────────────
+CONFIG_EXT4_FS=y
+CONFIG_EXT4_USE_FOR_EXT2=y
+CONFIG_BTRFS_FS=y
+CONFIG_FUSE_FS=y
+
+# ─────────────────────────────── Block / Storage ───────────────────────────────
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_CRYPT=y
+CONFIG_DM_VERITY=y
+CONFIG_DM_INTEGRITY=y
+
+CONFIG_NVME_CORE=y
+CONFIG_BLK_DEV_NVME=y
+CONFIG_AHCI=y
+CONFIG_USB_STORAGE=y
+
+# ─────────────────────────────── Cryptography ───────────────────────────────
+CONFIG_CRYPTO=y
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_XTS=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_CHACHA20=y
+CONFIG_CRYPTO_POLY1305=y
+
+# ─────────────────────────────── Networking ───────────────────────────────
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_TCP_CONG_BBR=y
+CONFIG_NET_SCH_FQ_CODEL=y
+CONFIG_DEFAULT_FQ_CODEL=y
+
+# ─────────────────────────────── AMD IOMMU ───────────────────────────────
+CONFIG_IOMMU_SUPPORT=y
+CONFIG_AMD_IOMMU=y
+CONFIG_AMD_IOMMU_V2=y
+
+# ─────────────────────────────── Graphics (AMD Navi 10) ───────────────────────────────
+CONFIG_DRM=y
+CONFIG_DRM_AMDGPU=y
+CONFIG_DRM_AMDKFD=y
+CONFIG_HSA_AMD=y
+
+# ─────────────────────────────── Input / HID ───────────────────────────────
+CONFIG_INPUT=y
+CONFIG_INPUT_EVDEV=y
+
+# ─────────────────────────────── Firmware ───────────────────────────────
+CONFIG_FW_LOADER=y
+CONFIG_EXTRA_FIRMWARE=""
+
+# ─────────────────────────────── Debug (Disabled) ───────────────────────────────
+CONFIG_DEBUG_KERNEL=n
+CONFIG_KALLSYMS=n
+CONFIG_KGDB=n
+CONFIG_MAGIC_SYSRQ=n
+
+# ─────────────────────────────── End ───────────────────────────────

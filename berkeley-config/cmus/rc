@@ -1,0 +1,14 @@
+# ~/.config/cmus/rc
+
+# Filters
+fset mp3=filename="*.mp3"
+fset ogg=filename="*.ogg"
+fset flac=filename="*.flac"
+fset lossless=flac|ogg|mp3
+
+# Settings
+set mouse=true
+set format_current= ▇ %{artist} ▇ [%{album}]  %{title} 
+set format_playlist= %-50t %-30a %= %30l %d
+set format_playlist_va= %-50t %-30a %= %30l %d
+set pl_env_vars=HOME

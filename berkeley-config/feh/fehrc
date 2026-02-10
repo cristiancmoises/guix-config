@@ -1,0 +1,49 @@
+# Optimized Feh Configuration for XLibre + XMonad + AMD GPU
+# This config enables fullscreen viewing, automatic zooming while preserving aspect ratio,
+# high-quality rendering, and performance optimizations. Feh uses Imlib2 for rendering,
+# which can leverage GPU acceleration if your AMD drivers (e.g., amdgpu) support X11 hardware
+# acceleration. There are no direct GPU options in feh; it depends on system configuration.
+# For maximum quality: Enable anti-aliasing and best scaling (feh defaults to bilinear;
+# no custom interpolation like cubic available). Images are loaded into RAM by default;
+# thumbnail cache size increased for faster navigation in large directories.
+# All in RAM: Feh preloads images in memory; use --cache-size to limit/control thumbnail caching.
+
+# Fullscreen mode
+fullscreen              # Enable fullscreen viewing (-F, --fullscreen)
+
+# Zoom and scaling
+auto-zoom               # Automatically zoom to fit screen while preserving aspect ratio (-Z, --auto-zoom)
+scale-down              # Scale down large images to fit window geometry (--scale-down)
+zoom fill               # Zoom to fill screen, preserving aspect ratio (--zoom fill)
+
+# Alignment
+# Images are centered by default in scale-down mode; no explicit 'align center' option needed.
+
+# Background
+image-bg black          # Set background for transparent parts to black (-B black)
+
+# Hide elements
+hide-pointer            # Hide mouse pointer (-Y, --hide-pointer)
+no-menus                # Disable menus (-N, --no-menus)
+draw-filename no        # Disable drawing filename (default off; -D to enable)
+# Note: draw-border, draw-info not standard options; borders/info hidden by default in clean mode.
+no-fehbg                # Do not create ~/.fehbg file (--no-fehbg)
+
+# Fonts
+font "Iosevka/16"       # Set global font to Iosevka at 16pt (-e, --font)
+
+# Transitions and quality
+# No 'blend true' option; feh does not support smooth transitions.
+# For maximum quality: Enable anti-aliasing (default on; toggle with -A)
+# No 'interp cubic' or 'quality best'; feh uses Imlib2's default high-quality scaling.
+
+# Performance: GPU, Quality, RAM
+# GPU: Relies on system (AMD GPU with X acceleration enabled).
+# RAM: Increase cache for thumbnails/preloading.
+cache-size 512          # Set thumbnail cache size to 512 MB for faster RAM-based loading (--cache-size 512)
+
+# Additional notes:
+# - For GPU usage: Ensure AMD drivers are optimized (e.g., mesa for open-source).
+# - High quality: Use in conjunction with system settings for best rendering.
+# - Run feh with: feh ./* for current directory images.
+# - Navigation: Left/Right arrows for prev/next by default.

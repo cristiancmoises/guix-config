@@ -1,0 +1,182 @@
+## =======================================================================
+##  securityops.defconfig
+##
+##  Custom Linux Kernel Configuration for:
+##    • AMD Ryzen 3 2200G APU (Raven Ridge, Zen 1 cores)
+##    • AMD Radeon RX 5600/5700 Series GPU (Navi 10)
+##
+##  Objectives:
+##    • Hardened kernel (KSPP + Clear Linux–style security flags)
+##    • High performance (XanMod defaults, HZ=1000, voluntary preemption)
+##    • Minimal hardware footprint (only required AMD/USB/NVMe drivers)
+##    • Retain legacy initrd model with linux-firmware only
+##
+##  Notes:
+##    - This configuration is tuned for GNU Guix System and the XanMod kernel.
+##    - It aims to balance *security*, *responsiveness*, and *throughput*.
+##    - Recommended kernel command-line parameters complement this setup
+##      (e.g. mitigations=auto,nosmt, iommu=pt, amd_iommu=on, lsm=yama,apparmor).
+##
+## =======================================================================
+
+
+# ────────────────────────────────
+#   Base Architecture
+# ────────────────────────────────
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_HIGH_RES_TIMERS=y        # Improves timer precision and latency
+CONFIG_HZ_1000=y                # Low-latency scheduler tick rate
+CONFIG_PREEMPT_VOLUNTARY=y      # Balanced preemption model (XanMod default)
+CONFIG_PREEMPT_DYNAMIC=y
+CONFIG_PREEMPT=y
+
+
+# ────────────────────────────────
+#   CPU / Scheduler / Performance
+# ────────────────────────────────
+CONFIG_MZEN=y                   # Optimize for AMD Zen microarchitecture
+CONFIG_MNATIVE=y                # Tune for the local CPU
+CONFIG_SCHED_AUTOGROUP=y        # Fair desktop scheduling
+CONFIG_SCHED_MC_PRIO=y          # Improve scheduling on multi-core CPUs
+CONFIG_SCHED_SMT=y              # Enable simultaneous multithreading awareness
+CONFIG_IRQ_TIME_ACCOUNTING=y    # Accurate CPU time accounting
+CONFIG_BPF=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_BPF_JIT=y
+CONFIG_CGROUP_BPF=y
+CONFIG_IO_URING=y               # High-performance async I/O
+CONFIG_TCP_CONG_BBR=y           # Google’s BBR congestion control
+CONFIG_BFQ_GROUP_IOSCHED=y      # Fair I/O scheduling (great for desktop use)
+
+
+# ────────────────────────────────
+#   Security Hardening
+# ────────────────────────────────
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_DEBUG_RODATA=y
+CONFIG_STRICT_DEVMEM=y
+CONFIG_STRICT_KERNEL_RWX=y
+CONFIG_UBSAN_ALIGNMENT=y
+CONFIG_STACKPROTECTOR_STRONG=y
+CONFIG_CC_STACKPROTECTOR_REGULAR=y
+CONFIG_FORTIFY_SOURCE=y
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
+CONFIG_INIT_ON_FREE_DEFAULT_ON=y
+CONFIG_REFCOUNT_FULL=y
+CONFIG_RANDOMIZE_BASE=y
+CONFIG_PAGE_TABLE_ISOLATION=y
+CONFIG_KFENCE=y                 # Lightweight memory safety error detector
+CONFIG_SECURITY=y
+CONFIG_SECURITYFS=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_APPARMOR=y
+CONFIG_LSM="yama,apparmor"      # Restrict user-space attack surface
+CONFIG_MODULE_SIG_FORCE=y       # Enforce signed kernel modules
+CONFIG_MODULE_SIG_ALL=y
+CONFIG_MODULE_COMPRESS_ZSTD=y   # Fast compression for modules
+
+
+# ────────────────────────────────
+#   Memory / Virtual Memory
+# ────────────────────────────────
+CONFIG_ZSWAP=y
+CONFIG_ZSWAP_COMPRESSOR=zstd
+CONFIG_ZRAM=y
+CONFIG_ZRAM_DEFAULT_COMPRESSOR=zstd
+CONFIG_ZRAM_WRITEBACK=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
+CONFIG_MGLRU=y                  # Multi-Generational LRU for better memory reclaim
+
+
+# ────────────────────────────────
+#   Filesystems
+# ────────────────────────────────
+CONFIG_EXT4_FS=y
+CONFIG_BTRFS_FS=y
+CONFIG_F2FS_FS=y
+CONFIG_XFS_FS=y
+CONFIG_FUSE_FS=y
+
+
+# ────────────────────────────────
+#   AMDGPU / DRM / Video
+# ────────────────────────────────
+CONFIG_DRM=y
+CONFIG_DRM_AMDGPU=y             # Core AMDGPU kernel driver
+CONFIG_DRM_KMS_HELPER=y
+CONFIG_DRM_TTM=y
+CONFIG_DRM_VRAM_HELPER=y
+CONFIG_DRM_AMDKFD=y             # HSA compute driver (ROCm-compatible)
+CONFIG_AMDKFD_KCQ=y
+CONFIG_HSA_AMD=y
+CONFIG_DRM_VCN=y                # Video Codec Next (modern decode/encode)
+CONFIG_DRM_VCE=y                # Video Codec Engine (legacy)
+CONFIG_DRM_UVD=y                # Unified Video Decoder (legacy)
+CONFIG_DRM_VESA=y               # Generic fallback framebuffer
+
+
+# ────────────────────────────────
+#   Storage
+# ────────────────────────────────
+CONFIG_ATA=y
+CONFIG_AHCI=y                   # SATA controller support
+CONFIG_SCSI=y
+CONFIG_USB_UAS=y                # USB Attached SCSI for high-speed storage
+CONFIG_USB_STORAGE=y
+CONFIG_NVME_CORE=y
+CONFIG_NVME=y
+
+
+# ────────────────────────────────
+#   USB / HID
+# ────────────────────────────────
+CONFIG_USB=y
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB_EHCI_HCD=y
+CONFIG_USB_HID=y
+CONFIG_USB_COMMON=y
+CONFIG_USB_UVC=y                # USB Video Class (for webcams)
+CONFIG_HID_GENERIC=y
+CONFIG_HID=y
+CONFIG_INPUT=y
+
+
+# ────────────────────────────────
+#   Networking
+# ────────────────────────────────
+CONFIG_NETFILTER=y
+CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+CONFIG_NETFILTER_XT_MATCH_STATE=y
+CONFIG_BRIDGE_NETFILTER=y
+CONFIG_NETFILTER_ADVANCED=y
+CONFIG_WIREGUARD=y              # Modern VPN protocol, in-kernel implementation
+
+
+# ────────────────────────────────
+#   Other Hardware Support
+# ────────────────────────────────
+CONFIG_MFD_CORE=y
+CONFIG_I2C=y
+CONFIG_SPI=y
+CONFIG_WATCHDOG=y
+
+
+# ────────────────────────────────
+#   Virtualization
+# ────────────────────────────────
+CONFIG_VIRTIO=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_NET=y
+CONFIG_VIRTIO_PCI_LEGACY=y
+
+
+# ────────────────────────────────
+#   Debugging / Development Tools
+# ────────────────────────────────
+CONFIG_DEBUG_KERNEL=y
+CONFIG_DEBUG_INFO=y
+CONFIG_DEBUG_INFO_DWARF5=y      # Modern DWARF5 format for smaller debug symbols
+CONFIG_KPROBES=y
+CONFIG_KGDB=y                   # Kernel debugger support
