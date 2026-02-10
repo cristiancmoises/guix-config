@@ -43,27 +43,32 @@
  (gnu home services desktop)
  (gnu home services sound)
  (gnu home services fontutils)
+ (gnu packages appimage)
+ (gnu packages enlightenment)
  (gnu packages suckless)
  (gnu packages file-systems)
  (gnu packages libreoffice)
  (gnu packages ninja)
  (gnu packages w3m)
  (gnu packages dns)
+ (gnu packages statistics)
  (gnu packages textutils)
  (gnu packages virtualization)
  (gnu packages gimp)
+ (gnu packages kde-graphics)
  (gnu packages haskell-xyz)
  (gnu packages xml)
  (gnu packages telegram)
  (gnu packages librewolf)
  (gnu packages games)
  (gnu packages luanti)
- (rosenthal packages web)
+ (gnu packages bioinformatics)
+ (gnu packages bioconductor)
  (gnu packages nss)
  (gnu packages maths)
  (gnu home services gnupg)     ; GnuPG home services
  (gnu home services xdg)       ; XDG home services
- (gnu home-services wm)        ; Window manager home services
+; (gnu home services wm)        ; Window manager home services
  (gnu packages commencement)
  (gnu packages vulkan)
  (gnu packages glib)
@@ -71,13 +76,14 @@
  (gnu packages benchmark)
  (ajatt packages video)
  (ajatt packages audio)
+ (gnu packages shells)
  (gnu home services shells)         ; Shell configuration services
  (gnu home services xdg)            ; XDG MIME and desktop integration
  (gnu packages python-xyz)
  (gnu packages)
  (radix services admin)        ; Custom admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
- (radix packages image-viewers) ; Custom image viewer packages
+ (longdong packages image-viewers) ; Custom image viewer packages
  (gnu packages gcc)
  (gnu packages vpn)
  (gnu packages image)
@@ -105,13 +111,14 @@
  (gnu packages firmware)
  (gnu packages version-control)
  (gnu packages node)
- (gnu packages admin)               ; System administration tools
+ (longdong packages admin)          ; System administration tools
  (gnu packages audio)               ; Audio-related packages
  (gnu packages bash)                ; Bash shell
  (gnu packages bittorrent)          ; BitTorrent clients
  (gnu packages compression)         ; Compression tools
  (gnu packages curl)                ; cURL for HTTP requests
- (gnu packages disk)                ; Disk management tools
+ (longdong packages disk)                ; Disk management tools
+ (longdong packages disks)
  (gnu packages ebook)               ; Ebook readers
  (gnu packages emacs)               ; Emacs editor
  (gnu packages emacs-xyz)           ; Emacs plugins
@@ -142,10 +149,11 @@
  (gnu packages rust-apps)           ; Rust applications
  (gnu packages terminals)           ; Terminal emulators
  (gnu packages text-editors)        ; Text editors
- (gnu packages tor)                 ; Tor anonymity network
- (gnu packages video)               ; Video tools
+ (longdong packages tor)                 ; Tor anonymity network
+ (longdong packages video)               ; Video tools
  (gnu packages music)               ; Audio tools 
  (gnu packages web)                 ; Web-related tools
+ (rosenthal packages web)
  (gnu packages web-browsers)        ; Web browsers
  (gnu packages xdisorg)             ; X11 display organization (for xlibre compatibility)
  (gnu packages xfce)                ; XFCE desktop tools
@@ -160,13 +168,13 @@
  (gnu packages pulseaudio)
  (gnu packages guile-xyz)           ; Guile additional packages
  (guix gexp)                        ; G-expressions for file handling
+ (guix packages)
  (srfi srfi-26)                     ; SRFI-26 for partial application
  (nongnu packages game-client)      ; Non-GNU game clients
  (gnu packages chromium)            ; Chromium
  (nongnu packages chrome)           ; Non-GNU Chrome browser
- (saayix packages binaries)         ; Custom binary packages
- (saayix packages python-xyz)
- (small-guix packages lutris)
+ (longdong packages binaries)         ; Custom binary packages
+ ;(small-guix packages lutris)
  (gnu services dbus)
  (gnu packages fcitx5)
  (gnu home services sound))
@@ -202,6 +210,7 @@
    gcc-toolchain
    pinentry-gtk2
    gtk
+   appimage-type2-runtime
    proot
    glib
    alsa-lib
@@ -235,7 +244,17 @@
    python                       ; Python
    python-pip                   ; Python package manager
    python-emoji                 ; Emoji support
+   python-biopython             ; BIOinformatic
    python-virtualenv
+   borg
+   btrfs-progs
+   r
+   r-deseq2
+   r-edger 
+   r-biocmanager
+   gash 
+   gash-utils
+   ;freebayes
    certbot
    rust                         ; Rust
    node                         ; Node.js runtime
@@ -246,7 +265,7 @@
    cl-clx                       ; X11 client library for Common Lisp
    cl-css                       ; CSS generation in Common Lisp
    guile-ares-rs               ; Guile bindings for Rust
-   )
+    )
 
   ;; ===========================
   ;; Multimedia / Audio / Video
@@ -279,6 +298,8 @@
    gpac
    vvdec-app
    gimp
+   jpegoptim
+   krita
    mplayer                       ; Media player
    obs
    obs-pipewire-audio-capture    ;
@@ -296,7 +317,7 @@
    qtshadertools
    vlc
    steam
-   lutris
+  ; lutris
    wine
    winetricks
    luanti
@@ -405,6 +426,9 @@
   ;; Security / Privacy (user-level)
   ;; ===========================
   (list
+   gnupg
+   pinentry
+   kleopatra
    wireguard-tools
    pwgen
    openssl
@@ -412,13 +436,12 @@
    gnupg
    hashcat
    keepassxc
-   ansible
+   ;ansible
    nftables
    tor
    tor-client
    torsocks
    openvpn
-   privoxy
    nmap
    tcpdump
    wireshark
@@ -548,16 +571,19 @@
   ;; Optional / Extras moved from config.scm
   ;; ===========================
   (list
+   opendoas
    google-chrome-stable
    librewolf
    telegram-desktop
    ungoogled-chromium
-   kitty
    alacritty
+   kitty
    flameshot
    qimgv
    geeqie
    ueberzug++
+   xdg-desktop-portal 
+   xdg-desktop-portal-gtk
    )
   ))
 
@@ -705,7 +731,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
                      ("LANG" . "en_US.UTF-8")
                      ("LANGUAGE" . "en_US.UTF-8")
                      ("LC_COLLATE" . "C")
-                     ("BROWSER" . "nyxt")
+                     ("BROWSER" . "chromium")
                      ("EDITOR" . "gedit")
                      ("FCEDIT" . "gedit")
                      ("PAGER" . "less")

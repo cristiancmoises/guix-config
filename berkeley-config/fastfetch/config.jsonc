@@ -3,16 +3,16 @@
 
   "logo": {
     "type": "kitty",
-    "source": "~/wallpapers/sec.png",
-    "padding": {
+    "source": "~/Downloads/hotwall/xhot.png",
+      "padding": {
       "top": 1,
       "left": 1,
       "right": 1,
       "bottom": 1
     },
-    "width": 25,
-    "height": 10,
-    "preserveAspectRatio": false
+   "width": 16,
+   "height": 10,
+    "preserveAspectRatio": true
   },
 
   "display": {

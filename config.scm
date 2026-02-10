@@ -91,7 +91,7 @@
  (gnu services admin)          ; Admin service definitions
  (radix packages xdisorg)      ; Custom X11 display organization packages
  (longdong packages image-viewers) ; Custom image viewer packages
- (saayix packages binaries)    ; Custom binary packages
+ (longdong packages binaries)    ; Custom binary packages
  (guix store)                  ; Guix store management
  (guix packages)               ; Guix package management
  (guix transformations)        ; Guix package transformations
@@ -173,7 +173,7 @@
  (gnu packages lxde)           ; LXDE desktop environment packages
  (gnu packages python)         ; Python programming language packages
  (gnu packages bittorrent)     ; BitTorrent-related packages
- (longdong packages chromium)       ; Chromium browser packages
+ (gnu packages chromium)       ; Chromium browser packages
  (gnu packages compression)    ; Compression-related packages
  (gnu packages ncurses)        ; Ncurses library packages
  (gnu packages web)            ; Web-related packages
@@ -227,12 +227,12 @@
   (package
     (inherit linux)
     (name "securityops")
-    (version "6.18.8") 
+    (version "6.19") 
     (source (origin
               (method url-fetch)
-              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.8.tar.xz") ;;  :)
+              (uri "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.19.tar.xz") ;;  :)
               (sha256
-               (base32 "1zwczw98ylqa3nhlqnvjbylaaqg8jn3z0j3xx02ddha2qbawbw1p"))))
+               (base32 "0mqka8ii7bvmx9hvfjdiyva9ib0j7m390gxhh8gki3qb4nl7jc1h"))))
     (arguments
      (substitute-keyword-arguments (package-arguments linux)
        ((#:defconfig _) (list (local-file "/etc/securityops.defconfig")))
@@ -347,7 +347,7 @@
   (timezone "America/Sao_Paulo")
   
   ;; Configure Brazilian keyboard layout for console
-  (keyboard-layout (keyboard-layout "br"))
+  (keyboard-layout (keyboard-layout "br" "abnt2"))
 
    ;; Hostname of the system
   (host-name "securityops")
@@ -389,6 +389,8 @@
  ;  xlibre-server
  ;  xlibre-input-libinput
  ;  xlibre-video-amdgpu
+   xdg-desktop-portal-wlr
+   xorg-server-xwayland
    sway
    waybar
    wl-clipboard
@@ -476,6 +478,7 @@
    strace
    edk2-tools
    alacritty
+   kitty
    foot
    fish
    bat
@@ -687,7 +690,7 @@ table inet filter {
         udp dport 51820 accept
 
         # Mullvad control servers (TCP 443)
-        ip saddr {$MULLVADIP} tcp sport 443 ct state established accept
+        ip saddr {$MULVADIP} tcp sport 443 ct state established accept
 
         # Tor daemon local ports
         tcp dport {9050,9040,5353} iif \"lo\" accept
@@ -726,7 +729,7 @@ table inet filter {
         oif \"wg0-mullvad\" { udp dport 53, tcp dport 53 } ip daddr 100.64.0.23 accept
 
         # Mullvad control servers
-        ip daddr {$MULLVADIP} tcp dport 443 accept
+        ip daddr {$MULVADUP} tcp dport 443 accept
 
         # Tor local ports
         oif \"lo\" tcp dport {9050,9040,5353} accept
@@ -748,7 +751,7 @@ table inet filter {
         oif \"wg0-mullvad\" udp dport 6881-6999 accept
 
         # Allow local networks
-        ip daddr {$LOCAL} accept
+        ip daddr {10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,0.254.0.0/16} accept
         ip6 daddr {fe80::/10,fc00::/7} accept
 
         # Log everything else
@@ -852,7 +855,8 @@ DisableDebuggerAttachment 1
     (theme
      (grub-theme
       (resolution '(1920 . 1080))
-      (image (local-file "/home/berkeley/Photos/wallpaper.png"))))))
+      (image (local-file "/home/berkeley/wallpapers/back.png"))))))
+      ;(image (local-file "/home/berkeley/Photos/wallpaper.png"))))))
   
   ;; Swap Space
   ;; Defines swap space with a specific UUID and priority

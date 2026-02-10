@@ -56,9 +56,9 @@ myConfig = def
       spawn "tor"
       spawn "mullvad-vpn"
       spawn "feh --bg-fill /home/berkeley/wallpapers/back.jpg"
+      spawn "bash -c 'setxkbmap br'"
       spawnOn "1" "kitty"
-      spawnOn "2" "zen"
-      spawnOn "3" "emacs"
+      spawnOn "2" "librewolf"
       spawn "polybar top-monitor-1" -- Ensure polybar is in Guix profile
       spawn "fcitx5 -d -r" -- Ensure fcitx5 is in Guix profile
   }
@@ -66,23 +66,22 @@ myConfig = def
 keyBinds :: [(String, X ())]
 keyBinds =
   [ ("M-d", spawn "rofi -show run") -- Changed to spawn and rely on startupHook
-  , ("M-0", spawn "kitty")
+  , ("M-0", spawn "/home/berkeley/.guix-home/profile/bin/kitty")
   , ("M-i", spawn "scrot")
+  , ("M-a", spawn "kitty")
+  , ("M-o", spawn "sh -c 'kitty -e /mnt/games/batata.sh'")
   , ("M-r", spawn "sh -c 'kitty -e /usr/bin/turborecorder'")
-  , ("M-e", runOrRaise "zen" (className =? "Navigator"))
+  , ("M-e", spawn "/home/berkeley/.guix-home/profile/bin/librewolf")
   , ("M-p", runOrRaise "openshot-qt" (className =? "openshot"))
-  , ("M-o", runOrRaise "obs" (className =? "obs"))
   , ("M-f", withFocused $ windows . W.sink)
-  , ("M-x", spawn "google-chrome")
   , ("M-S-q", return ())
   , ("M-q", kill)
   , ("M-n", spawn "scrot")
-  , ("M-g", spawn "google-chrome")
   , ("M-m", spawn "sh -c 'kitty -e /home/berkeley/.guix-home/profile/bin/cmus & /home/berkeley/.config/cmus/covers.sh'")
   , ("M-l", sendToEmptyWorkspace)
   , ("M-t", viewEmptyWorkspace)
   , ("M-z", spawn "/home/berkeley/.guix-home/profile/bin/flameshot gui")
-  , ("M-w", spawn "steam")
+  , ("M-w", spawn "/home/berkeley/.guix-home/profile/bin/chromium")
   , ("M-v", easySwap)
   , ("M-j", spawn "scrot")
   , ("M-k", spawn "/files/scripts/tmp.sh")
