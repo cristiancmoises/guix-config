@@ -1,3 +1,4 @@
+# ~/.config/lf/
 # --- Preview ---
 set previewer ~/.local/bin/lf/preview
 set preview true
