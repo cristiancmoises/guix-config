@@ -1,0 +1,696 @@
+;; -*- mode: scheme; -*-
+;; Guix Home Configuration for User "berkeley"  —  Helios Neo 16 (i7 + RTX 4060)
+;;
+;; Ported from the older AMD home.scm. User-level packages are hardware-agnostic
+;; and were kept as-is. The only hardware change: the AMD-only DRI_PRIME=1 offload
+;; variable was REMOVED (NVIDIA uses __NV_PRIME_RENDER_OFFLOAD instead — set it
+;; per-app when you want offload; in NVIDIA-only/MUX mode you need neither).
+;;
+;; Dual monitors: a ~/.local/bin/dual-monitor helper is installed and `autorandr`
+;; is added. Workflow is documented in README.md (auto-applies a saved layout on
+;; HDMI/DP hotplug, WM-agnostic — works under Xmonad without a DE).
+;;
+;; NVIDIA: the whole package list is wrapped in (replace-mesa … #:driver nvda-580)
+;; so every Home-profile GL/Vulkan app uses the RTX 4060 — the OS transformation
+;; in config.scm only covers the SYSTEM profile, not this Guix Home profile.
+;; replace-mesa also grafts ffmpeg -> ffmpeg/nvidia (NVENC/NVDEC for mpv/obs/vlc).
+;; Also: steam -> steam-nvidia; NVIDIA shader disk cache enabled.
+;;
+;; Apply: guix home reconfigure ~/.config/guix/home.scm
+;;
+;; Maintainer: Cristian Cezar Moisés
+;; Last Updated: June 08, 2026
+
+(use-modules
+ (gnu packages base)
+ (gnu packages backup)
+ (gnu packages tor)
+ (gnu packages ssh)
+ (gnu home)
+ (gnu home services)
+ (gnu home services desktop)
+ (gnu home services sound)
+ (gnu home services fontutils)
+ (gnu packages appimage)
+ (gnu packages enlightenment)
+ (gnu packages suckless)
+ (gnu packages gawk)
+ (gnu packages file-systems)
+ (gnu packages libreoffice)
+ (gnu packages ninja)
+ (gnu packages w3m)
+ (gnu packages dns)
+ (gnu packages statistics)
+ (gnu packages textutils)
+ (gnu packages virtualization)
+ (gnu packages gimp)
+ (gnu packages kde-graphics)
+ (gnu packages haskell-xyz)
+ (gnu packages xml)
+ (gnu packages video)
+ (gnu packages telegram)
+ (gnu packages librewolf)
+ (gnu packages games)
+ (gnu packages luanti)
+ (gnu packages bioinformatics)
+ (gnu packages bioconductor)
+ (gnu packages nss)
+ (gnu packages maths)
+ (gnu home services gnupg)
+ (gnu home services xdg)
+ (gnu packages commencement)
+ (gnu packages vulkan)
+ (gnu packages glib)
+ (gnu packages benchmark)
+ (gnu packages shells)
+ (gnu home services shells)
+ (gnu packages python-xyz)
+ (gnu packages)
+ (gnu packages gcc)
+ (gnu packages vpn)
+ (gnu packages image)
+ (gnu packages vim)
+ (gnu packages cran)
+ (gnu packages gnupg)
+ (gnu packages rust)
+ (gnu packages ruby)
+ (gnu packages ruby-xyz)
+ (gnu packages compton)
+ (gnu packages sqlite)
+ (gnu packages wine)
+ (nongnu packages wine)
+ (nongnu packages nvidia)
+ (gnu packages password-utils)
+ (gnu packages python-build)
+ (gnu packages unicode)
+ (gnu packages lxqt)
+ (gnu packages java)
+ (gnu packages xorg)
+ (gnu packages kde-pim)
+ (gnu packages networking)
+ (gnu packages golang)
+ (gnu packages wm)
+ (gnu packages ruby-check)
+ (gnu packages firmware)
+ (gnu packages version-control)
+ (gnu packages node)
+ (gnu packages admin)
+ (gnu packages audio)
+ (gnu packages bash)
+ (gnu packages bittorrent)
+ (gnu packages compression)
+ (gnu packages curl)
+ (gnu packages disk)
+ ;(longdong packages disks)
+ (gnu packages ebook)
+ (gnu packages emacs)
+ (gnu packages emacs-xyz)
+ (gnu packages freedesktop)
+ (gnu packages build-tools)
+ (gnu packages gl)
+ (gnu packages gtk)
+ (gnu packages image-viewers)
+ (gnu packages gstreamer)
+ (gnu packages gnome)
+ (gnu packages hardware)
+ (gnu packages haskell)
+ (gnu packages haskell-check)
+ (gnu packages ibus)
+ (gnu packages image-processing)
+ (gnu packages imagemagick)
+ (gnu packages linux)
+ (gnu packages lisp)
+ (gnu packages lisp-xyz)
+ (gnu packages lxde)
+ (gnu packages mail)
+ (gnu packages mpd)
+ (gnu packages package-management)
+ (gnu packages pdf)
+ (gnu packages pkg-config)
+ (gnu packages python)
+ (gnu packages qt)
+ (gnu packages rust-apps)
+ (gnu packages terminals)
+ (gnu packages text-editors)
+ ;(longdong packages tor)
+ ;(longdong packages video)
+ (gnu packages music)
+ (gnu packages web)
+ (rosenthal packages web)
+ (gnu packages web-browsers)
+ (gnu packages tor-browsers)
+ (gnu packages xdisorg)
+ (gnu packages xfce)
+ (gnu packages fonts)
+ (gnu packages emulators)
+ (gnu packages tls)
+ (gnu packages cmake)
+ (gnu packages shellutils)
+ (gnu packages photo)
+ (gnu packages llvm)
+ (gnu packages haskell-apps)
+ (gnu packages pulseaudio)
+ (gnu packages guile-xyz)
+ (guix gexp)
+ (guix packages)
+ (srfi srfi-26)
+ (nongnu packages game-client)
+ (nongnu packages chrome)
+ ;(longdong packages binaries)
+ (gnu services dbus)
+ (gnu packages fcitx5)
+ (gnu home services sound))
+
+(home-environment
+
+ (packages
+  ;; NVIDIA for the Guix Home profile (a SEPARATE closure from the OS): graft
+  ;; mesa -> nvda-580 and ffmpeg -> ffmpeg/nvidia across every home GL/Vulkan app
+  ;; (mpv/obs/vlc/terminals/games/emulators), which otherwise fall back to
+  ;; llvmpipe under the proprietary driver. nvda-580 matches the running kernel
+  ;; module (580.159.04) and the system config.scm — keep them in lockstep.
+  (replace-mesa
+   (append
+   ;; ── Development tools ──
+   (list bash
+         cmake
+         llvm-for-mesa
+         meson
+         strace
+         edk2-tools
+         fzf
+         jq
+         pkg-config
+         haunt
+         bash-minimal
+         qtgraphicaleffects
+         gcc-toolchain
+         pinentry-gtk2
+         gtk
+         appimage-type2-runtime
+         proot
+         glib
+         alsa-lib
+         glibc
+         nspr
+         nss
+         libx11
+         libxcomposite
+         libxdamage
+         libxext
+         libxfixes
+         libxrandr
+         libxshmfence
+         libdrm
+         libxkbcommon
+         libxcb
+         ;; Programming languages
+         bundler
+         ruby
+         ruby-json
+         gcc
+         jekyll
+         phoronix-test-suite
+         ghc
+         cabal-install
+         cabal-doctest
+         go
+         openjdk
+         python
+         python-pip
+         python-emoji
+         python-biopython
+         python-virtualenv
+         borg
+         btrfs-progs
+         r
+         r-deseq2
+         r-edger
+         r-biocmanager
+         certbot
+         rust
+         node
+         git
+         git-lfs
+         forgejo
+         anubis
+         cl-clx
+         cl-css
+         guile-ares-rs)
+
+   ;; ── Multimedia / audio / video ──
+   (list mesa-utils
+         libva
+         libvdpau
+         vulkan-loader
+         vulkan-headers
+         libass
+         enca
+         uchardet
+         libdvdcss
+         libdvdread
+         libdvdnav
+         libbluray
+         libxml2
+         ;; pipewire + wireplumber are provided by home-pipewire-service-type;
+         ;; do NOT list them here — the replace-mesa graft (via ffmpeg) would make
+         ;; a second, grafted variant and Guix rejects duplicate pipewire/wireplumber.
+         pavucontrol
+         pulsemixer
+         v4l-utils
+         ffmpeg
+         ffmpegthumbnailer
+         guvcview
+         cmatrix
+         mpv
+         cmus
+         gpac
+         gimp
+         jpegoptim
+         krita
+         mplayer
+         obs
+         obs-pipewire-audio-capture
+         imagemagick
+         perl-image-exiftool
+         noisetorch
+         mpd
+         bluez
+         bluez-alsa
+         blueman
+         alsa-utils
+         pavucontrol-qt
+         qtwebengine
+         qtshadertools
+         vlc
+         steam-nvidia
+         wine
+         winetricks
+         luanti
+         luanti-server
+         pcsx2
+         pcsx2-patches
+         wmctrl)
+
+   ;; ── File and disk management ──
+   (list wipe
+         lf
+         ranger
+         p7zip
+         qpdfview
+         libreoffice
+         zip
+         xlsx2csv
+         odt2txt
+         w3m
+         atool
+         poppler
+         chafa
+         librsvg
+         exfat-utils
+         exfatprogs
+         fuse-exfat
+         fuse
+         ntfs-3g
+         pandoc
+         parted
+         smartmontools
+         mergerfs
+         udevil
+         gnome-disk-utility
+         gparted
+         bcachefs-tools
+         dosfstools
+         usbutils
+         sqlite
+         procps)
+
+   ;; ── Desktop utilities / window management ──
+   ;; Dual-monitor: autorandr (auto-apply layout on hotplug) + arandr (GUI).
+   (list fcitx5
+         fcitx5-qt
+         librewolf
+         torbrowser
+         desktop-file-utils
+         qemu
+         gnome-tweaks
+         lxappearance
+         flatpak-xdg-utils
+         flatpak
+         starship
+         pfetch
+         lm-sensors
+         fastfetch
+         bat
+         qtbase
+         cool-retro-term
+         qtdeclarative
+         qtsvg
+         qtwebview
+         qttools
+         ninja
+         coreutils
+         findutils
+         grep
+         sed
+         gawk
+         mesa
+         mesa-opencl
+         qtwayland
+         zoxide
+         autorandr               ; NEW: multi-monitor auto-layout
+         arandr                  ; NEW: GUI monitor arrangement
+         ;; Bars, notifications, window management
+         polybar
+         waybar
+         fnott
+         awww
+         wl-clipboard
+         wlrctl
+         wlsunset
+         compton
+         picom
+         brightnessctl
+         feh
+         rofi
+         xmonad
+         xmobar
+         xprop
+         xrandr
+         xset
+         xterm
+         xkeyboard-config
+         st
+         xpra
+         xwininfo
+         xdpyinfo)
+
+   ;; ── Security / privacy (user-level) ──
+   (list gnupg
+         pinentry
+         kleopatra
+         wireguard-tools
+         pwgen
+         openssl
+         firejail
+         hashcat
+         keepassxc
+         nftables
+         tor
+         tor-client
+         torsocks
+         openvpn
+         nmap
+         tcpdump
+         wireshark
+         openssh
+         iperf
+         netcat-openbsd
+         arp-scan
+         dnstracer
+         ldns
+         knot)
+
+   ;; ── Text editors / IDEs ──
+   (list nano
+         emacs
+         emacs-nerd-icons
+         emacs-telega
+         tdlib
+         emacs-vterm
+         emacs-org
+         emacs-org-static-blog
+         emacs-magit
+         neovim
+         gedit)
+
+   ;; ── Emulators / misc ──
+   (list higan
+         qbittorrent
+         at-spi2-core
+         calc)
+
+   ;; ── Fonts ──
+   (list font-gnu-unifont
+         font-gnu-freefont
+         font-dejavu
+         font-adobe-source-code-pro
+         font-adobe-source-han-sans
+         font-adobe-source-sans
+         font-adobe-source-serif
+         font-anonymous-pro
+         font-anonymous-pro-minus
+         font-awesome
+         font-cns11643-swjz
+         font-comic-neue
+         font-culmus
+         font-dosis
+         font-dseg
+         font-fantasque-sans
+         font-fira-code
+         font-fira-mono
+         font-fira-sans
+         font-fontna-yasashisa-antique
+         font-google-noto-emoji
+         font-google-material-design-icons
+         font-google-noto
+         font-google-roboto
+         font-hack
+         font-hermit
+         font-ibm-plex
+         font-inconsolata
+         font-iosevka
+         font-iosevka-aile
+         font-iosevka-etoile
+         font-iosevka-slab
+         font-iosevka-term
+         font-iosevka-term-slab
+         font-ipa-mj-mincho
+         font-jetbrains-mono
+         font-lato
+         font-liberation
+         font-linuxlibertine
+         font-lohit
+         font-meera-inimai
+         font-mononoki
+         font-mplus-testflight
+         font-public-sans
+         font-rachana
+         font-sarasa-gothic
+         font-sil-andika
+         font-sil-charis
+         font-sil-gentium
+         font-tamzen
+         font-terminus
+         font-tex-gyre
+         font-un
+         font-vazirmatn
+         font-wqy-microhei
+         font-wqy-zenhei
+         font-adobe100dpi
+         font-adobe75dpi
+         font-cronyx-cyrillic
+         font-dec-misc
+         font-isas-misc
+         font-micro-misc
+         font-misc-cyrillic
+         font-misc-ethiopic
+         font-misc-misc
+         font-mutt-misc
+         font-schumacher-misc
+         font-screen-cyrillic
+         font-sony-misc
+         font-sun-misc
+         font-util
+         font-winitzki-cyrillic
+         font-xfree86-type1
+         font-openmoji
+         unicode-emoji
+         r-emojifont
+         emacs-emojify
+         emacs-company-emoji)
+
+   ;; ── Optional / extras ──
+   (list opendoas
+         google-chrome-stable
+         librewolf
+         telegram-desktop
+         wezterm
+         alacritty
+         kitty
+         flameshot
+         qimgv
+         geeqie
+         ueberzugpp
+         xdg-desktop-portal
+         xdg-desktop-portal-gtk))
+   #:driver nvda-580))
+
+ ;;; ───────────────────────────────────────────────────────────────────────
+ ;;; Services
+ ;;; ───────────────────────────────────────────────────────────────────────
+ (services
+  (list
+   ;; D-Bus + PipeWire.
+   (service home-dbus-service-type)
+   (service home-pipewire-service-type)
+
+   ;; A ready-to-edit dual-monitor helper (PATH includes ~/.local/bin).
+   ;; Find your real output names with `xrandr --query`, edit, then either run
+   ;; it from your Xmonad startupHook or save it via `autorandr --save docked`.
+   (service home-files-service-type
+            `((".local/bin/dual-monitor"
+               ,(plain-file "dual-monitor"
+"#!/bin/sh
+# Dual-monitor layout for the Helios Neo 16.
+# Run `xrandr --query` first and replace the output names below.
+#   eDP-1  = internal panel        (often eDP-1 / eDP-1-1)
+#   HDMI-0 = external via HDMI      (NVIDIA names: HDMI-0 / DP-0 / DP-1)
+INTERNAL=eDP-1
+EXTERNAL=HDMI-0
+
+if xrandr --query | grep -q \"^$EXTERNAL connected\"; then
+    # External right of internal, both at native; primary = external.
+    xrandr --output \"$INTERNAL\" --auto --primary \\
+           --output \"$EXTERNAL\" --auto --right-of \"$INTERNAL\"
+else
+    xrandr --output \"$INTERNAL\" --auto --primary
+fi
+"))))
+
+   ;; ── Bash (fallback shell) ──
+   (service home-bash-service-type
+            (home-bash-configuration
+             (aliases
+              `(("analyze_video" . "~/.local/bin/analyze_video.sh")
+                ("ct" . "~/.local/bin/compatibility.sh")
+                ("grep" . "grep --color=auto")
+                ("update" . "guix pull && sudo guix system reconfigure /etc/config.scm")
+                ("lf" . "~/.local/bin/lf/lfrun")
+                ("ll" . "ls -l")
+                ("ls" . "ls -p --color=auto")
+               ; ("run_code" . "g++ -o main main.cc -Ofast -std=c++23 -s -flto -march=native -I ~/dev/ajatt/hakurei/include/ && ./main")
+                ("rgf" . "rg --files | rg")
+                ("mpv" . "mpv --audio-pitch-correction=yes --vf=setpts=PTS/1")
+                ("record" . "ffmpeg -f x11grab -r 23 -s 1920x1080 -i $DISPLAY -f pulse -i nui_mic_remap -filter_complex '[1:a]volume=2.0[a]' -map 0:v -map '[a]' -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 23 -y /tmp/output.mp4")
+                ("isolate" . "guix shell --container --network --preserve='^DISPLAY$' --preserve='^XAUTHORITY$' --expose=$XAUTHORITY --expose=/etc/ssl/certs --no-cwd")))
+             (bashrc (list (local-file "/etc/.bashrc" "bashrc")))
+             (bash-profile (list (local-file "/etc/.bash_profile" "bash_profile")))))
+
+   ;; ── Fish (primary shell) ──
+   (service home-fish-service-type
+            (home-fish-configuration
+             (config
+              (list
+               (plain-file "fish_greeting.fish"
+                           "function fish_greeting\n    echo \"\"\nend")
+               (plain-file "fish_init.fish"
+                           "set -x PATH $HOME/.guix-home/profile/bin $PATH
+starship init fish | source
+zoxide init fish | source
+bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
+             (aliases
+              `(("torando" . "~/torando/torando.sh")
+                ("toroff" . "~/torando/toroff.sh")
+                ("toggle-vpn" . "~/toggle-vpn.sh")
+                ("gi" . "eval (ssh-agent -c) && ssh-add ~/.ssh/securityops")
+                ("android" . "flatpak run com.google.AndroidStudio")
+                ("disc" . "flatpak run so.libdb.dissent")
+                ("repair" . "sudo guix gc --verify=repair,contents")
+                ("tx" . "bash ~/scripts/tmp.sh")
+                ("wp" . "bash ~/scripts/wal.sh")
+                ("gu" . "guix package -u")
+                ("cvi" . "convert original.png -resize 500% resized.png")
+                ("cvv" . "ffmpeg -i video.mkv -codec copy video.mp4")
+                ("bgv" . "mplayer -quiet -nosound -loop 0 -vo xv vid.mp4")
+                ("l" . "du -h --max-depth=1 .")
+                ("del" . "shred -uvz")
+                ("gob" . "~/scripts/gob.sh")
+                ("noise" . "~/.local/bin/noisetorch")
+                ("delp" . "wipe -r")
+                ("q" . "exit")
+                ("p" . "pfetch")
+                ("f" . "fastfetch")
+                ("ss" . "sudo env TERM=xterm su -")
+                ("ee" . "exiftool -recursive -all=")
+                ("ex" . "exiftool -all= && del *original*")
+                ("yt" . "~/scripts/git/ytfzf/ytfzf --max-threads=4 --thumbnail-quality=maxres --features=hd -t --ii=https://yt.securityops.co")
+                ("enc" . "tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz")
+                ("dec" . "openssl enc -d -aes256 -in secured.tar.gz | tar xz")
+                ("s" . "sensors")
+                ("clean" . "~/scripts/git/cleanall/cleaner.sh")
+                ("e" . "cd ..")
+                ("up" . "~/scripts/git/up.sh")
+                ("7" . "7z x")
+                ("ia" . "/usr/local/bin/yai")
+                ("wall" . "cp /home/berkeley/Downloads/wall.jpg /tmp && bg /tmp/wall.jpg")
+                ("help" . "del /tmp/*jpg /tmp/*webp /tmp/*png /tmp/*mp4 /tmp/*gif /tmp/*jpeg && rm -rf ad*")
+                ("now" . "cd /tmp && tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz && mv secured.tar.gz /files")
+                ("bb" . "bg ~/downloads/preto.jpg")
+                ("xx" . "bg /var/cache/wallpaper.png")
+                ("hot" . "cp ~/secured.tar.gz /tmp && cd /tmp && openssl enc -d -aes256 -in secured.tar.gz | tar xz")
+                ("big" . "find /home/berkeley -type f -size +1000M > /home/berkeley/big.txt")
+                ("zip" . "7z a arquivos")
+                ("h" . "haunt build && haunt serve")
+                ("vid" . "~/scripts/vid.sh")
+                ("zap" . "~/scripts/zap.sh")
+                ("torup" . "~/scripts/torup.sh")
+                ("gangsta" . "~/scripts/music.sh")
+                ("sss" . "~/scripts/sss.sh")
+                ("lf" . "~/.local/bin/lf/lfrun")
+                ("gif" . "~/scripts/gif.sh")
+                ("giff" . "~/scripts/gif2.sh")
+                ("br" . "~/scripts/br.sh")
+                ("wik" . "~/scripts/wiki.sh")
+                ("upp" . "~/scripts/up.sh")
+                ("rec" . "~/scripts/record/record")
+                ("post" . "bash ~/scripts/copycat.sh")
+                ("torb" . "~/scripts/torbrowser.sh")
+                ("ice" . "~/scripts/icecat.sh")
+                ("bw" . "bg /home/berkeley/Downloads/wall2.jpg")
+                ("mp" . "~/scripts/mpv.sh")
+                ("term" . "~/scripts/terminator.sh")
+                ("s1" . "~/scripts/server.sh")
+                ("gitlfs" . "~/scripts/lfs.sh")
+                ("cam" . "~/scripts/cam.sh")
+                ("c" . "clear")
+                ("vis" . "/home/berkeley/.guix-profile/bin/vis")
+                ("news" . "twtxt timeline")
+                ("dm" . "~/.local/bin/dual-monitor")
+                ("tempo" . "curl 'wttr.in/caxias_do_sul?date=next7'")
+                ("bun" . "/home/berkeley/.bun/bin/bun")))))
+
+   ;; ── XDG MIME associations ──
+   (service home-xdg-mime-applications-service-type
+            (home-xdg-mime-applications-configuration
+             (default
+              `(("emacs.desktop" . ("text/plain" "text/troff" "text/xml" "text/x-c" "text/x-c++" "text/x-diff" "text/x-lisp" "text/x-scheme" "text/x-shellscript" "text/x-tex" "image/vnd.djvu"))
+                ("lf.desktop" . ("inode/directory" "x-scheme-handler/ftp" "x-scheme-handler/nfs" "x-scheme-handler/smb" "x-scheme-handler/ssh" "application/x-directory"))
+                ("mpv.desktop" . ("image/gif" "audio/mpeg" "audio/ogg" "audio/opus" "audio/x-opus+ogg" "audio/flac" "video/mp4" "application/octet-stream" "video/mp2t" "video/x-matroska" "video/webm"))
+                ("nsxiv.desktop" . ("image/avif" "image/bmp" "image/jpeg" "image/png" "image/svg+xml" "image/webp"))
+                ("foliate.desktop" . ("application/epub+zip"))
+                ("sioyek.desktop" . ("application/pdf"))))))
+
+   ;; ── Environment variables (AMD DRI_PRIME removed; NVIDIA shader cache added) ──
+   (simple-service 'environment-variables-service
+                   home-environment-variables-service-type
+                   `(("PATH" . "$HOME/.local/bin:/home/berkeley/.bun/bin:$PATH")
+                     ("GUILE_WARN_DEPRECATED" . "detailed")
+                     ("GTK_IM_MODULE" . "fcitx")
+                     ("QT_IM_MODULE" . "fcitx")
+                     ("XMODIFIERS" . "@im=fcitx")
+                     ("LANG" . "en_US.UTF-8")
+                     ("LANGUAGE" . "en_US.UTF-8")
+                     ("LC_COLLATE" . "C")
+                     ("BROWSER" . "librewolf")
+                     ("EDITOR" . "gedit")
+                     ("FCEDIT" . "gedit")
+                     ("PAGER" . "less")
+                     ("READER" . "foliate")
+                     ("SHELL" . "fish")
+                     ("TERMINAL" . "wezterm")
+                     ("VISUAL" . "nsxiv")
+                     ("__GL_SHADER_DISK_CACHE" . "1")
+                     ("__GL_SHADER_DISK_CACHE_PATH" . "/home/berkeley/.cache/nvidia")
+                     ("__GL_SHADER_DISK_CACHE_SKIP_CLEANUP" . "1")
+                     ("NVM_DIR" . "/home/berkeley/.config/nvm"))))))

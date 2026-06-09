@@ -6,7 +6,8 @@
 
 <img src="https://img.shields.io/liberapay/patrons/securityops.svg?logo=liberapay">
 
-
+> [!NOTE]
+> 🗄️ **ARCHIVED — previous machine.** This is the previous **AMD Ryzen 3 2200G** desktop. The current daily driver is [`../predator-helios-intel/`](../predator-helios-intel/README.md) — see [`../comparison.md`](../comparison.md) for the AMD → Intel/NVIDIA migration. The shared [`../README.md`](../README.md) gives the repo-wide overview.
 
 > Some files included here are forked from other projects, such as MPV shaders, Simple History, Cmus, FFMpeg recorder.
 
@@ -26,7 +27,7 @@ This configuration delivers a **secure**, **high‑performance**, and **minimali
 With [**XMonad**](https://xmonad.org) as the tiling window manager, a **custom [Linux kernel**](https://www.kernel.org/), and a curated set of packages and services, this setup balances **performance**, **security**, and **aesthetics** for gaming (Steam), privacy (Mullvad VPN, Tor), development workflows, and Japanese input support.
 
 **Maintainer**: Cristian Cezar Moisés  
-**Last Updated**: January 03, 2026
+**Last Updated**: January 03, 2026 · reorganized into `ryzen-2200g-amd/` on June 09, 2026
 
 <p align="center">  <img src="https://codeberg.org/berkeley/guix-config/raw/branch/main/screenshots/emacs.png" width="1024" height="620"></p>
 
@@ -47,7 +48,7 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
 - [YouTube Channel](https://www.youtube.com/@securityops) - Videos and tutorials
 - [License](#license) - Licensing information
 
-# ⚙️ Optimized For
+## ⚙️ Optimized For
 
 - ✅ **GPU Performance**: Tuned AMDGPU drivers with Mesa for gaming and rendering.
 - ✅ **CPU Efficiency**: SecurityOps kernel with AMD P-state, full preemption, and all 4 threads enabled for maximum responsiveness.
@@ -76,7 +77,7 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
 - **Hardened Kernel Self‑Protection** — Custom kernel built with KSPP‑recommended settings and enforced runtime safeguards:  
   `module.sig_enforce=1` (only load cryptographically signed modules),  
   `lockdown=confidentiality` (restrict kernel features that could leak sensitive data),  
-  `mitigations=auto` (enable CPU vulnerability mitigations automatically).
+  `mitigations=on` (force-enable all CPU vulnerability mitigations).
 - **USB Attack Surface Reduction** — All USB devices are unauthorized by default (`usbcore.authorized_default=0`), with Udev rules whitelisting only trusted hardware.
 - **Application Containment & Malware Scanning** — Firejail sandboxes isolate untrusted applications; ClamAV provides on‑demand and scheduled antivirus scanning.
 
@@ -97,7 +98,34 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
 ### **Maintainability**:  
 - Declarative Guix configuration for reproducibility.  
 - Custom channels (small-guix, ajattix, radix) for Mullvad, dictionaries, and more.  
-- Detailed comments in config.scm for easy updates.
+- Detailed comments in `ryzen-2200g-amd/config.scm` for easy updates.
+
+## 🗂️ Dotfiles & Scripts
+
+The user-space configuration for this AMD machine lives **alongside this README** inside the `ryzen-2200g-amd/` folder:
+
+- **[`./berkeley-config/`](./berkeley-config/)** — the `~/.config` dotfiles for the XMonad workflow: **XMonad**, **Rofi**, **Polybar/Xmobar**, **cmus**, and the rest of the tiling desktop. These belong to **this** machine.
+- **[`./extras/`](./extras/)** — helper **scripts** (recorders, launchers, utilities) referenced throughout this setup.
+- **[`./.bashrc`](./.bashrc)** — the shell rc carried over from this box (the current machine moved to fish + starship).
+
+> 🧹 Repo slimming: the Git history was rewritten to purge multi-GB screen recordings that had bloated `.git`; a root [`.gitignore`](../.gitignore) now blocks `*.mkv` and build/cache artifacts (XMonad recompiles, the cmus library cache). Demo clips are hosted externally on **YouTube [@securityops](https://youtube.com/@securityops)**.
+
+## 🚀 Applying This Configuration
+
+> ℹ️ With the two-folder layout, all paths are **folder-qualified**. The shared `channels.scm` lives at the **repo root** and is used by both machines.
+
+```bash
+# 1. Pull channels (self-hosted mirrors at git.securityops.co) — channels.scm is at the repo root
+guix pull -C channels.scm && guix pull
+
+# 2. Reconfigure the system from THIS (archived AMD) machine's config
+sudo guix system reconfigure ryzen-2200g-amd/config.scm
+
+# 3. Reconfigure Guix Home from THIS machine's home config
+guix home reconfigure ryzen-2200g-amd/home.scm
+```
+
+The generated system file is installed to `/etc/config.scm` on the running host; the **source of truth** in this repo is `ryzen-2200g-amd/config.scm`. The current daily driver uses the parallel `predator-helios-intel/config.scm` and `predator-helios-intel/home.scm` instead.
 
 ## 📦 Package Highlights
 
@@ -130,7 +158,7 @@ This GNU Guix configuration delivers a privacy-first, high-performance system op
   <img src="https://github.com/cristiancmoises/brutefox/assets/86272521/15afb340-af3f-4c3b-b029-d80ab0da59a0" width="350" height="220" alt="BrutefoX"/>
 </a>
 
-# SecurityOps Kernel
+## SecurityOps Kernel
 
 **SecurityOps** is a custom Linux kernel built for **maximum resilience** on modern AMD hardware.  
 It integrates **XanMod optimizations**, **Clear Linux performance patches**, and **KSPP (Kernel Self Protection Project) hardening** into one consistent baseline.  
@@ -208,52 +236,63 @@ Designed for people who can’t afford compromise.
 
 ### 📜 Kernel Arguments
 
+> Mirrors the `(kernel-arguments …)` block in [`config.scm`](./config.scm) verbatim, grouped by purpose.
+
 | Kernel Argument | Description |
-|-----------------|---------|
+|-----------------|-------------|
+| **— Boot hygiene —** | |
 | quiet | Minimize boot output for a cleaner boot process |
 | splash | Enable graphical splash screen during boot |
-| zswap.enabled=1 | Enable zswap for compressed swap in RAM |
-| zswap.compressor=zstd | Use Zstandard compression for zswap to optimize memory |
-| zswap.max_pool_percent=15 | Limit zswap pool to 15% of RAM to balance memory usage |
-| zswap.zpool=z3fold | Use z3fold allocator for zswap to improve memory efficiency |
-| elevator=bfq | Use Budget Fair Queueing I/O scheduler for balanced disk performance |
-| module.sig_enforce=1 | Enforce signed kernel modules for enhanced security |
-| lockdown=confidentiality | Enable kernel lockdown to restrict root access to kernel features |
-| mitigations=auto | Automatically apply CPU vulnerability mitigations (e.g., Spectre, Meltdown) |
-| randomize_kstack_offset=on | Randomize kernel stack offset to prevent stack-based attacks |
-| slab_nomerge | Disable slab merging to mitigate kernel exploits |
-| init_on_alloc=1 | Zero-initialize allocated memory for security |
+| noatime | Skip file access-time writes to reduce disk I/O |
+| **— CPU & speculative execution —** | |
+| mitigations=on | Enable all CPU vulnerability mitigations (Spectre, Meltdown, etc.) |
+| nosmt | Disable SMT siblings to close cross-thread side channels |
+| spectre_v2=on | Force the Spectre v2 mitigation |
+| spec_store_bypass_disable=on | Mitigate Spectre v4 (Speculative Store Bypass) |
+| l1tf=full,force | Full L1TF (Foreshadow) mitigation |
+| mds=full | Full Microarchitectural Data Sampling mitigation |
+| tsx=off | Disable TSX as defense-in-depth |
+| pti=on | Force Page Table Isolation (Meltdown) |
+| **— Memory safety —** | |
+| slab_nomerge | Disable slab cache merging to harden the heap |
+| page_alloc.shuffle=1 | Randomize page-allocator freelists |
+| init_on_alloc=1 | Zero memory on allocation |
 | init_on_free=1 | Zero memory pages on free to prevent data leaks |
-| tcp_congestion_control=bbr | Use BBR algorithm for efficient TCP networking (optimized for torrenting) |
-| net.core.default_qdisc=fq_codel | Set fair queuing with controlled delay for network traffic |
-| net.core.rmem_max=16777216 | Increase receive buffer size for high-speed networking (1Gbps) |
-| net.core.wmem_max=16777216 | Increase send buffer size for high-speed networking (1Gbps) |
-| net.ipv4.tcp_rmem=4096 87380 16777216 | Tune TCP receive buffer sizes for optimized networking |
-| net.ipv4.tcp_wmem=4096 65536 16777216 | Tune TCP send buffer sizes for optimized networking |
-| net.core.netdev_max_backlog=5000 | Set packet queue length for high-speed network interfaces |
-| net.ipv4.tcp_fastopen=3 | Enable TCP Fast Open for faster connections |
-| net.ipv4.tcp_mtu_probing=1 | Enable MTU probing for better network performance |
-| amdgpu.ppfeaturemask=0xffffffff | Unlock all AMD GPU power and performance features for Radeon RX 5600/5700 |
-| amdgpu.dpm=1 | Enable dynamic power management for AMD GPU |
-| amdgpu.dc=1 | Enable AMD Display Core for modern display handling |
-| amd_pstate=active | Enable AMD P-state driver for CPU power efficiency on Ryzen 3 2200G |
-| usbcore.authorized_default=0 | Disable auto-authorizing USB devices to prevent BadUSB attacks |
-| modprobe.blacklist=firewire_core,dccp,sctp,rds,tipc,thunderbolt | Blacklist unused modules (FireWire, DCCP, SCTP, RDS, TIPC, Thunderbolt) for security |
-| transparent_hugepage=always | Enable transparent huge pages for improved memory performance |
-| kptr_restrict=2 | Restrict kernel pointer access to prevent information leaks |
-| page_alloc.shuffle=1 | Randomize page allocation to reduce exploit predictability |
-| mce=0 | Disable Machine Check Exception reporting to reduce overhead |
-| apparmor=0 | Disable AppArmor (not used, Firejail preferred for sandboxing) |
-| ipv6.disable=0 | Enable IPv6 for compatibility with modern networks |
-| noresume | Disable resume from hibernation (not used in this setup) |
-| nomodeset=0 | Allow kernel mode-setting for AMD GPU drivers |
-| nowatchdog | Disable watchdog timer to reduce system overhead |
-| cpufreq.default_governor=schedutil | Use schedutil governor for dynamic CPU frequency scaling |
-| rcu_nocbs=0-7 | Disable RCU callbacks on all CPU cores for performance |
-| nmi_watchdog=0 | Disable NMI watchdog to reduce CPU overhead |
-| audit=0 | Disable kernel auditing to reduce logging overhead |
-| console=tty0 | Set primary console to tty0 for boot messages |
-| consoleblank=0 | Disable console blanking for continuous display output |
+| page_poison=1 | Poison freed pages to catch use-after-free |
+| slub_debug=FZ | SLUB sanity checks + red-zoning (F, Z) |
+| randomize_kstack_offset=on | Randomize the kernel stack offset per syscall |
+| vsyscall=none | Remove the legacy vsyscall page (a fixed ROP target) |
+| kptr_restrict=2 | Hide kernel pointers from all users |
+| **— IOMMU / DMA —** | |
+| amd_iommu=on | Enable the AMD IOMMU for DMA protection |
+| iommu=force | Force the IOMMU even where firmware doesn't require it |
+| **— LSM & lockdown —** | |
+| lsm=yama,apparmor,integrity,lockdown,landlock | Active LSM stack and ordering |
+| apparmor=1 | Enable AppArmor |
+| security=apparmor | Make AppArmor the primary LSM |
+| lockdown=confidentiality | Kernel lockdown in confidentiality mode |
+| **— Modules & integrity —** | |
+| module.sig_enforce=1 | Only load cryptographically signed kernel modules |
+| **— Scheduler / responsiveness —** | |
+| preempt=voluntary | Voluntary kernel preemption model |
+| rcu_nocbs=0-3 | Offload RCU callbacks for all four cores |
+| irqaffinity=1-3 | Steer IRQs away from CPU 0 |
+| cpufreq.default_governor=schedutil | Use the schedutil CPU-frequency governor |
+| amd_pstate=active | AMD P-state driver in active mode |
+| **— Network —** | |
+| tcp_congestion_control=bbr | BBR congestion control (great for high-speed/torrent) |
+| net.core.default_qdisc=fq_codel | fq_codel queuing for low latency + fairness |
+| **— Entropy —** | |
+| random.trust_cpu=off | Do not trust the CPU RNG (RDRAND) as an entropy source |
+| **— Reliability —** | |
+| mce=1 | Enable Machine Check Exception reporting |
+| watchdog | Enable the hardware watchdog |
+| **— GPU (Navi 10) —** | |
+| amdgpu.sched_policy=2 | AMDGPU scheduler policy |
+| amdgpu.abmlevel=0 | Disable adaptive backlight modulation |
+| amdgpu.backlight=0 | Let the platform (not amdgpu) own backlight control |
+| **— Attack-surface reduction —** | |
+| modprobe.blacklist=firewire_core,firewire_ohci,dccp,sctp,rds,tipc | Blacklist FireWire DMA and obscure network protocols |
 
 ## Services
 
@@ -293,7 +332,7 @@ This table lists all services and kernel modules configured in the GNU Guix syst
 
 ## Xlibre Configuration
 
-This repository contains my custom **Xlibre** configuration for GNU Guix, optimized for AMDGPU graphics, input devices, and display settings. The configuration is fully defined in `config.scm`.
+This repository contains my custom **Xlibre** configuration for GNU Guix, optimized for AMDGPU graphics, input devices, and display settings. The configuration is fully defined in `ryzen-2200g-amd/config.scm`.
 
 ---
 
@@ -312,7 +351,7 @@ The goal of this configuration is to provide:
 
 ## Configuration Details
 
-The configuration in `config.scm`:
+The configuration in `ryzen-2200g-amd/config.scm`:
 
 ```scheme
 (define my-xlibre-config
@@ -452,7 +491,7 @@ The table below compares GNU Guix (configured for the securityops host) with com
 - **Package Management**: GNU Guix’s declarative, functional approach ensures precise control and rollbacks, earning 5 stars. Arch’s rolling updates and Fedora’s DNF are flexible but less predictable. Debian and Ubuntu’s apt is stable but less dynamic. Windows relies on manual or third-party tools (e.g., winget, Chocolatey), lacking system integration.
 - **Reproducibility**: Guix’s bit-for-bit reproducible builds are unmatched, guaranteeing identical systems. Debian offers partial reproducibility, while Arch, Fedora, Ubuntu, and Windows have minimal to no reproducibility due to proprietary components or non-deterministic updates.
 - **Free Software**: Guix’s 100% FSF-approved software aligns with your ethical goals, earning 5 stars. Debian and Fedora are mostly free but include some non-free firmware. Arch and Ubuntu often incorporate proprietary components. Windows is fully proprietary, scoring 1 star.
-- **Declarative Config**: Guix’s Scheme-based config.scm unifies system configuration, unlike the manual configs of Arch, Debian, Fedora, Ubuntu, and Windows, which rely on disparate tools or GUI settings.
+- **Declarative Config**: Guix’s Scheme-based `ryzen-2200g-amd/config.scm` unifies system configuration, unlike the manual configs of Arch, Debian, Fedora, Ubuntu, and Windows, which rely on disparate tools or GUI settings.
 - **Privacy**: Your Guix setup with Mullvad VPN, Tor, and NFTables provides superior privacy. Arch and Debian are configurable but require manual setup. Fedora is moderate, Ubuntu’s telemetry weakens its privacy, and Windows’ extensive telemetry and data collection make it the weakest.
 - **Security**: Guix’s kernel hardening (lockdown=confidentiality, usbcore.authorized_default=0), Firejail, and NFTables excel. Arch is highly configurable, Fedora uses SELinux, Debian is stable but slower to patch, Ubuntu’s AppArmor is less robust, and Windows relies on frequent updates and antivirus but is vulnerable to exploits.
 - **Performance**: Guix’s linux kernel with AMD tuning (amd_pstate, amdgpu.dpm), zswap, and BBR optimizes your Ryzen 3 2200G and Radeon RX 5600/5700. Arch and Fedora offer high performance with manual tuning, Debian and Ubuntu are less optimized, and Windows provides strong performance with good AMD driver support but is bloated.
@@ -464,7 +503,7 @@ GNU Guix is the best OS for your securityops system, earning 5 stars in most cat
 - **Reproducibility and Free Software**: Bit-for-bit builds and 100% free software ensure transparency and consistency, critical for your ethical and reproducible setup, far surpassing Windows’ proprietary nature.
 - **Privacy and Security**: Mullvad VPN, Tor, strict NFTables, and kernel hardening provide unmatched protection, outperforming Windows’ telemetry-heavy approach, Ubuntu’s weak defaults, and even Arch’s manual configuration.
 - **Performance**: AMD-specific optimizations, zswap, and BBR make Guix ideal for your hardware and use cases (gaming, torrenting, development), rivaling Windows’ driver support but with less overhead.
-- **Declarative Config**: The unified config.scm simplifies maintenance compared to other OSes’ fragmented configs or Windows’ GUI-based settings.
+- **Declarative Config**: The unified `ryzen-2200g-amd/config.scm` simplifies maintenance compared to other OSes’ fragmented configs or Windows’ GUI-based settings.
 
 While Guix’s learning curve is steep, its benefits in privacy, security, performance, and reproducibility make it the superior choice for your tailored, high-performance system, especially compared to Windows’ lack of free software, poor privacy, and non-reproducible nature.
 
@@ -474,7 +513,7 @@ GNU Guix is the optimal choice for the securityops system due to its unparallele
 
 1. **Reproducibility**: Guix’s bit-for-bit reproducible builds ensure the system can be recreated identically, unlike Arch or Fedora, where manual setups vary. This guarantees consistency for your AMD Ryzen and Radeon setup.
 2. **Free Software**: As an FSF-approved distribution, Guix uses 100% free software, avoiding proprietary blobs in Ubuntu or Fedora. This aligns with your ethical goals and ensures full system transparency.
-3. **Declarative Configuration**: The Scheme-based config.scm unifies kernel, services, and packages in one file, simplifying maintenance compared to Debian’s scattered configs or Arch’s manual tweaks.
+3. **Declarative Configuration**: The Scheme-based `ryzen-2200g-amd/config.scm` unifies kernel, services, and packages in one file, simplifying maintenance compared to Debian’s scattered configs or Arch’s manual tweaks.
 4. **Privacy and Security**: Guix enables seamless integration of Mullvad VPN, Tor, and NFTables, surpassing Ubuntu’s weak privacy defaults or Fedora’s SELinux focus. Kernel hardening (lockdown=confidentiality, usbcore.authorized_default=0) and Firejail provide robust protection for your hardware.
 5. **Performance**: Guix’s custom linux kernel with AMD tuning (amd_pstate, amdgpu.dpm), 4GB zswap, and BBR networking optimizes your Ryzen 3 2200G and Radeon RX 5600/5700. Unlike Arch’s manual tuning, Guix automates these optimizations declaratively.
 6. **Customizability**: Custom channels (small-guix, ajattix) provide niche packages (Mullvad, Japanese dictionaries), offering Arch-like flexibility with better reproducibility. This supports your diverse needs (gaming, development, multimedia).
@@ -500,8 +539,14 @@ Despite a steeper learning curve, Guix’s benefits make it unmatched for a priv
   <a href="https://codeberg.org/berkeley/guix-config"><img src="https://i.ibb.co/QMP7tH4/GUIX-AVERAGE-USER.png" width='500' height='250'></a>
 </p>
 
+## 🔗 Related
+
+- 🖥️ **Current daily driver** → [`../predator-helios-intel/README.md`](../predator-helios-intel/README.md) — Acer Predator Helios Neo 16, Intel i7-13700HX + NVIDIA RTX 4060.
+- 🔀 **Migration write-up** → [`../comparison.md`](../comparison.md) — the AMD → Intel/NVIDIA trade-offs (free Mesa vs. proprietary NVIDIA, monolithic vs. modular kernel).
+- 📂 **Repo overview** → [`../README.md`](../README.md) — shared, machine-agnostic root README.
+
 ## 📜 License
 
 This configuration is licensed under the **GNU General Public License v3.0**. Forked components (e.g., MPV shaders, Cmus themes) retain their respective licenses.
 
-*Last Updated: January 03, 2026*
+*Last Updated: January 03, 2026 · reorganized into `ryzen-2200g-amd/` on June 09, 2026*

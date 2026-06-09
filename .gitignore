@@ -1,0 +1,27 @@
+# ── Build artifacts & caches (never commit) ──────────────────────────────────
+
+# XMonad recompilation output
+**/xmonad/build-*/
+**/xmonad/xmonad-x86_64-linux
+**/xmonad/xmonadx86
+**/xmonad/xmonad.errors
+*.hi
+*.o
+
+# cmus runtime cache / library db
+**/cmus/music-library
+**/cmus/lib.pl
+**/cmus/autosave
+**/cmus/cache
+**/cmus/search-history
+**/cmus/command-history
+
+# ── Large media: keep the repo lean ──────────────────────────────────────────
+# Multi-GB screen recordings used to bloat history. Keep them out of git;
+# host demo clips externally (YouTube / a release asset) and link them.
+*.mkv
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.swp
+*~
+.DS_Store

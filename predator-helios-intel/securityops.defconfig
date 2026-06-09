@@ -1,0 +1,360 @@
+#
+# =========================
+#  securityops.defconfig   (Intel build)
+# =========================
+# Target: Intel Core i7-13700HX (Raptor Lake-HX, 8P+8E / 24T)
+#         + NVIDIA RTX 4060 Laptop (Ada) [proprietary] + Intel UHD iGPU
+# Storage: NVMe behind Intel VMD; LUKS2 (dm-crypt)
+# Profile: Production – Hardened, Modular (NVIDIA-capable), IMA measure-only, Guix
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# READ THIS FIRST
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. This file is used ONLY by the custom `securityops` kernel package, which is
+#    COMMENTED OUT in config.scm. With nonguix `linux` (the default) it is ignored.
+# 2. Proprietary NVIDIA is an out-of-tree LOADABLE module:
+#       - CONFIG_MODULES MUST be =y  (the old AMD config had it =n -> impossible here)
+#       - kernel lockdown must NOT be force-enabled, and module-sig must NOT be
+#         forced, or the unsigned nvidia.ko is refused at load.
+# 3. nonguix's PREBUILT nvidia-driver is compiled against nonguix `linux`. It will
+#    NOT load on this self-built kernel (config / RANDSTRUCT seed / module ABI
+#    differ). If you build this kernel, you must build the NVIDIA module against
+#    THIS kernel yourself. Otherwise stay on nonguix `linux`.
+#
+# RELAXED vs. the AMD hardened profile (so the GPU works), all flagged:
+#   CONFIG_MODULES        n -> y                  (required for nvidia.ko)
+#   LOCKDOWN force-confidentiality   on -> off    (blocks unsigned modules)
+#   "lockdown" dropped from CONFIG_LSM            (same reason)
+#   CONFIG_IMA_APPRAISE   on -> off (measure-only) (appraisal would reject the blob)
+#   CONFIG_MODULE_SIG_FORCE  not set              (re-enable after MOK-signing nvidia)
+#   CONFIG_GCC_PLUGIN_RANDSTRUCT kept, but note (3): it changes struct layout, so a
+#     foreign-built nvidia module will mismatch. Set =n if you hit module-load errors.
+#
+# GAMING / FULL-HARDWARE additions (2026-06-08): NTSYNC (Proton), Intel thermal
+# stack for thermald, game-controller HID, CPU-freq governors, NO_HZ/PSI/THP
+# policy, DRM fbdev emulation. All KSPP/Clear/Xanmod hardening below is intact.
+# Reminder: this file is consumed ONLY by the custom `securityops` kernel, which
+# is disabled in config.scm. The system runs nonguix `linux` (required for the
+# prebuilt proprietary NVIDIA module). Use this kernel only with nouveau, or
+# after self-building the NVIDIA module against it (see notes 2-3 above).
+#
+# PERFORMANCE (2026-06-08): this kernel is DORMANT. The current desktop slowness
+# comes from the RUNNING nonguix `linux` + config.scm (cmdline + the CPU-pacing
+# service), NOT from this file. For parity with config.scm, init_on_free default
+# and NUMA balancing are turned OFF below.
+#
+
+# ─────────────────────────────── Architecture ───────────────────────────────
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_X86=y
+CONFIG_X86_MCE=y
+CONFIG_X86_MCE_INTEL=y
+CONFIG_X86_INTEL_LPSS=y
+CONFIG_X86_INTEL_PSTATE=y
+CONFIG_INTEL_IDLE=y
+
+# ─────────────────────────────── Timers & Scheduling ───────────────────────────────
+CONFIG_HIGH_RES_TIMERS=y
+CONFIG_HZ_1000=y
+CONFIG_SCHED_HRTICK=y
+# perf: single-node laptop — no NUMA, periodic scans only add latency
+# (matches numa_balancing=disable on the config.scm cmdline)
+# CONFIG_NUMA_BALANCING is not set
+CONFIG_PREEMPT_DYNAMIC=y
+CONFIG_PREEMPT_VOLUNTARY=y
+CONFIG_SCHED_STACK_END_CHECK=y
+# Hybrid P/E-core scheduling (Thread Director / ITMT) — important for Raptor Lake-HX
+CONFIG_SCHED_MC=y
+CONFIG_SCHED_MC_PRIO=y
+CONFIG_INTEL_HFI_THERMAL=y
+# Tickless idle + pressure-stall info + autogroup (desktop/gaming latency)
+CONFIG_NO_HZ_IDLE=y
+CONFIG_PSI=y
+CONFIG_SCHED_AUTOGROUP=y
+
+# ─────────────────────────────── CPU Optimizations ───────────────────────────────
+# MNATIVE_INTEL requires the cpu-optimizations (graysky) patch, matching how the
+# AMD config used MNATIVE/MZEN. If you build a stock tree without that patch,
+# comment these two out and use CONFIG_GENERIC_CPU=y instead.
+CONFIG_MNATIVE_INTEL=y
+# CONFIG_GENERIC_CPU=y
+CONFIG_CPU_SUP_INTEL=y
+CONFIG_X86_FEATURE_NAMES=y
+
+# ─────────────────────────────── CPU Frequency Scaling ───────────────────────────────
+# intel_pstate=active (cmdline) exposes performance/powersave; default powersave.
+# config.scm no longer pins 'performance'; it sets EPP=balance_performance via a
+# shepherd service (intel_pstate active still boosts to full turbo under load).
+CONFIG_CPU_FREQ=y
+CONFIG_CPU_FREQ_GOV_PERFORMANCE=y
+CONFIG_CPU_FREQ_GOV_POWERSAVE=y
+CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE=y
+
+# ─────────────────────────────── Speculative Execution Mitigations ───────────────────────────────
+# 7.0 symbol names (CONFIG_MITIGATION_*). Compiled in; runtime gated by mitigations=on.
+CONFIG_CPU_MITIGATIONS=y
+CONFIG_MITIGATION_PAGE_TABLE_ISOLATION=y
+CONFIG_MITIGATION_RETPOLINE=y
+CONFIG_MITIGATION_SPECTRE_BHI=y
+CONFIG_MITIGATION_MDS=y
+CONFIG_MITIGATION_TAA=y
+CONFIG_MITIGATION_MMIO_STALE_DATA=y
+CONFIG_MITIGATION_GDS=y
+# RFDS affects the E-cores (Atom Gracemont) in this hybrid CPU — keep it.
+CONFIG_MITIGATION_RFDS=y
+
+# ─────────────────────────────── Core Security Framework ───────────────────────────────
+CONFIG_SECURITY=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_APPARMOR=y
+CONFIG_DEFAULT_SECURITY_APPARMOR=y
+CONFIG_SECURITY_LANDLOCK=y
+# Lockdown LSM compiled-in but NOT forced (see header). nvidia.ko needs this.
+CONFIG_SECURITY_LOCKDOWN_LSM=y
+# CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY is not set
+# "integrity" kept for IMA measurement; "lockdown" removed.
+# NOTE: config.scm passes lsm=landlock,yama,apparmor on the cmdline, which
+# OVERRIDES this list and drops "integrity"+"bpf". IMA needs the integrity LSM,
+# so if you boot THIS kernel, change the cmdline to
+# lsm=landlock,yama,integrity,apparmor,bpf to actually get IMA measurement.
+CONFIG_LSM="landlock,yama,integrity,apparmor,bpf"
+
+# ─────────────────────────────── Memory Safety & Hardening ───────────────────────────────
+CONFIG_RANDOMIZE_BASE=y
+CONFIG_STACKPROTECTOR_STRONG=y
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
+# perf: matches init_on_free=0 on the config.scm cmdline (init_on_alloc kept on).
+# init_on_free zeroes every freed page -> alloc/free latency on desktop workloads.
+# CONFIG_INIT_ON_FREE_DEFAULT_ON is not set
+CONFIG_STRICT_KERNEL_RWX=y
+CONFIG_STRICT_MODULE_RWX=y
+CONFIG_STRICT_DEVMEM=y
+CONFIG_IO_STRICT_DEVMEM=y
+CONFIG_BUG_ON_DATA_CORRUPTION=y
+CONFIG_DEBUG_WX=y
+CONFIG_VMAP_STACK=y
+CONFIG_RANDOMIZE_KSTACK_OFFSET=y
+CONFIG_RANDOMIZE_KSTACK_OFFSET_DEFAULT=y
+
+# ─────────────────────────────── Slab / Heap Hardening ───────────────────────────────
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+CONFIG_SHUFFLE_PAGE_ALLOCATOR=y
+
+# ─────────────────────────────── Page Table Protection ───────────────────────────────
+CONFIG_PAGE_TABLE_CHECK=y
+CONFIG_PAGE_TABLE_CHECK_ENFORCED=y
+
+# ─────────────────────────────── GCC Hardening Plugins ───────────────────────────────
+# See header note (3): RANDSTRUCT changes struct layout. If a foreign-built NVIDIA
+# module refuses to load, set both to "is not set".
+CONFIG_GCC_PLUGINS=y
+CONFIG_GCC_PLUGIN_RANDSTRUCT=y
+CONFIG_RANDSTRUCT_FULL=y
+
+# ─────────────────────────────── Integrity Subsystem (IMA / EVM) ───────────────────────────────
+# Measure-only: appraisal disabled so the proprietary blob + Guix store load.
+CONFIG_IMA=y
+CONFIG_IMA_DEFAULT_HASH_SHA256=y
+CONFIG_IMA_TRUSTED_KEYRING=y
+# CONFIG_IMA_APPRAISE is not set
+# CONFIG_EVM is not set
+CONFIG_KEYS=y
+CONFIG_TRUSTED_KEYS=y
+CONFIG_SYSTEM_TRUSTED_KEYRING=y
+CONFIG_SYSTEM_BLACKLIST_KEYRING=y
+
+# ─────────────────────────────── Sandboxing & Syscall Filtering ───────────────────────────────
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+CONFIG_USER_NS=y
+
+# ─────────────────────────────── Kernel Module Support (REQUIRED for NVIDIA) ───────────────────────────────
+CONFIG_MODULES=y
+CONFIG_MODULE_UNLOAD=y
+CONFIG_MODULE_SIG=y
+CONFIG_MODULE_SIG_ALL=y
+CONFIG_MODULE_SIG_SHA512=y
+# CONFIG_MODULE_SIG_FORCE is not set      # flip on only after MOK-signing nvidia.ko
+CONFIG_MODVERSIONS=y
+
+# ─────────────────────────────── Memory Management ───────────────────────────────
+CONFIG_LRU_GEN=y
+CONFIG_LRU_GEN_ENABLED=y
+CONFIG_TRANSPARENT_HUGEPAGE=y
+CONFIG_TRANSPARENT_HUGEPAGE_MADVISE=y
+CONFIG_ZSWAP=y
+CONFIG_ZSWAP_COMPRESSOR_DEFAULT_ZSTD=y
+CONFIG_ZRAM=y
+CONFIG_ZRAM_DEF_COMP_ZSTD=y
+CONFIG_ZRAM_WRITEBACK=y
+
+# ─────────────────────────────── Filesystems ───────────────────────────────
+CONFIG_EXT4_FS=y
+CONFIG_EXT4_USE_FOR_EXT2=y
+CONFIG_BTRFS_FS=m
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_UTF8=y
+CONFIG_FUSE_FS=m
+CONFIG_OVERLAY_FS=m
+
+# ─────────────────────────────── Block / Storage ───────────────────────────────
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_CRYPT=y
+CONFIG_DM_VERITY=y
+CONFIG_DM_INTEGRITY=y
+CONFIG_NVME_CORE=y
+CONFIG_BLK_DEV_NVME=y
+CONFIG_AHCI=y
+CONFIG_USB_STORAGE=y
+# Intel Volume Management Device — REQUIRED to see the encrypted NVMe (matches the
+# "vmd" initrd module in config.scm). Without this the box will not boot.
+CONFIG_VMD=y
+
+# ─────────────────────────────── Cryptography ───────────────────────────────
+CONFIG_CRYPTO=y
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_AES_NI_INTEL=y
+CONFIG_CRYPTO_XTS=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_SHA256_SSSE3=y
+CONFIG_CRYPTO_SHA512_SSSE3=y
+CONFIG_CRYPTO_CHACHA20=y
+CONFIG_CRYPTO_CHACHA20_X86_64=y
+CONFIG_CRYPTO_POLY1305=y
+CONFIG_CRYPTO_POLY1305_X86_64=y
+
+# ─────────────────────────────── Networking ───────────────────────────────
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_TCP_CONG_BBR=y
+CONFIG_NET_SCH_FQ_CODEL=y
+CONFIG_DEFAULT_FQ_CODEL=y
+CONFIG_NETFILTER=y
+CONFIG_NF_TABLES=m
+CONFIG_NF_CONNTRACK=m
+CONFIG_WIREGUARD=m
+
+# ─────────────────────────────── Intel IOMMU ───────────────────────────────
+CONFIG_IOMMU_SUPPORT=y
+CONFIG_INTEL_IOMMU=y
+CONFIG_INTEL_IOMMU_SVM=y
+CONFIG_INTEL_IOMMU_DEFAULT_ON=y
+
+# ─────────────────────────────── Graphics ───────────────────────────────
+CONFIG_DRM=y
+CONFIG_DRM_FBDEV_EMULATION=y
+# Intel iGPU (Raptor Lake UHD)
+CONFIG_DRM_I915=y
+CONFIG_DRM_I915_GVT=n
+# NVIDIA proprietary supplies its own module. Disable in-tree nouveau so it can't
+# bind the RTX 4060 (mirrors modprobe.blacklist=nouveau on the cmdline).
+# CONFIG_DRM_NOUVEAU is not set
+# Framebuffer/console
+CONFIG_FB=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+CONFIG_ACPI_VIDEO=y
+
+# ─────────────────────────────── Sound (Raptor Lake: HDA + SOF) ───────────────────────────────
+CONFIG_SOUND=y
+CONFIG_SND=y
+CONFIG_SND_HDA_INTEL=m
+CONFIG_SND_HDA_CODEC_REALTEK=m
+CONFIG_SND_HDA_CODEC_HDMI=m
+CONFIG_SND_SOC=m
+CONFIG_SND_SOC_SOF_TOPLEVEL=y
+CONFIG_SND_SOC_SOF_INTEL_TOPLEVEL=y
+CONFIG_SND_SOC_SOF_HDA_AUDIO_CODEC=y
+
+# ─────────────────────────────── Wi-Fi / Bluetooth ───────────────────────────────
+# Helios Neo 16 ships either Intel/Killer (iwlwifi) or MediaTek (mt7921). Both
+# enabled as modules so the correct one binds.
+CONFIG_CFG80211=m
+CONFIG_MAC80211=m
+CONFIG_WLAN=y
+CONFIG_IWLWIFI=m
+CONFIG_IWLMVM=m
+CONFIG_MT7921E=m
+CONFIG_BT=m
+CONFIG_BT_HCIBTUSB=m
+CONFIG_BT_INTEL=m
+CONFIG_BT_HCIBTUSB_MTK=y
+
+# ─────────────────────────────── USB / Thunderbolt(USB4) ───────────────────────────────
+CONFIG_USB=y
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB4=m
+CONFIG_HOTPLUG_PCI=y
+CONFIG_HOTPLUG_PCI_PCIE=y
+
+# ─────────────────────────────── Input / HID (laptop) ───────────────────────────────
+CONFIG_INPUT=y
+CONFIG_INPUT_EVDEV=y
+CONFIG_SERIO_I8042=y
+CONFIG_KEYBOARD_ATKBD=y
+CONFIG_MOUSE_PS2=y
+CONFIG_HID=y
+CONFIG_HID_GENERIC=y
+CONFIG_USB_HID=y
+CONFIG_I2C_HID=m
+CONFIG_HID_MULTITOUCH=m
+# Game controllers (full-hardware gaming)
+CONFIG_INPUT_JOYDEV=m
+CONFIG_JOYSTICK_XPAD=m
+CONFIG_HID_NINTENDO=m
+CONFIG_HID_PLAYSTATION=m
+CONFIG_HID_STEAM=m
+
+# ─────────────────────────────── Platform / Power (Acer laptop) ───────────────────────────────
+CONFIG_ACPI=y
+CONFIG_ACPI_AC=y
+CONFIG_ACPI_BATTERY=y
+CONFIG_ACPI_BUTTON=y
+CONFIG_ACPI_THERMAL=y
+CONFIG_PM=y
+CONFIG_SUSPEND=y
+# No swap partition on this machine -> no hibernation (also conflicts with lockdown).
+# CONFIG_HIBERNATION is not set
+CONFIG_ACER_WMI=m
+CONFIG_ACER_WIRELESS=m
+CONFIG_X86_PLATFORM_DEVICES=y
+# Intel thermal + RAPL power-capping (required for thermald to act under load)
+CONFIG_POWERCAP=y
+CONFIG_INTEL_RAPL=m
+CONFIG_INTEL_POWERCLAMP=m
+CONFIG_INT340X_THERMAL=m
+CONFIG_INT3400_THERMAL=m
+CONFIG_INT3403_THERMAL=m
+CONFIG_PROC_THERMAL_MMIO_RAPL=m
+# Hardware monitoring (lm-sensors coretemp)
+CONFIG_HWMON=y
+CONFIG_SENSORS_CORETEMP=m
+
+# ─────────────────────────────── Firmware ───────────────────────────────
+CONFIG_FW_LOADER=y
+# Firmware comes from the linux-firmware package in Guix; keep this empty.
+CONFIG_EXTRA_FIRMWARE=""
+
+# ─────────────────────────────── Gaming / Wine / Proton ───────────────────────────────
+# NTSYNC: in-kernel NT synchronization primitives -> /dev/ntsync. Proton/Wine
+# use it via PROTON_USE_NTSYNC=1; large latency win over esync/fsync.
+CONFIG_NTSYNC=y
+# kcmp() syscall — used by Wine/Proton (and CRIU).
+CONFIG_CHECKPOINT_RESTORE=y
+# userfaultfd — used by some games / background memory managers.
+CONFIG_USERFAULTFD=y
+# futex_waitv — fsync/esync path (on by default; explicit here).
+CONFIG_FUTEX=y
+
+# ─────────────────────────────── Debug (Disabled) ───────────────────────────────
+CONFIG_DEBUG_KERNEL=n
+CONFIG_KALLSYMS=n
+CONFIG_KGDB=n
+CONFIG_MAGIC_SYSRQ=n
+
+# ─────────────────────────────── End ───────────────────────────────
