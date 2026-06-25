@@ -350,6 +350,17 @@ CONFIG_CHECKPOINT_RESTORE=y
 CONFIG_USERFAULTFD=y
 # futex_waitv — fsync/esync path (on by default; explicit here).
 CONFIG_FUTEX=y
+# vsyscall EMULATION machinery. The config.scm cmdline "vsyscall=emulate" (needed so
+# Arxan anti-tamper games like RDR2, which READ the legacy vsyscall page, don't fault
+# and clean-exit before a window) is SILENTLY IGNORED unless this is =y. Already =y by
+# Kconfig default; pinned explicit so a base-config change can't turn the cmdline arg
+# into a no-op. (The compiled default stays CONFIG_LEGACY_VSYSCALL_NONE — the cmdline
+# overrides it to emulate at boot. "emulate" is NOT a Kconfig choice on 7.x, only a
+# cmdline value, so this toggle is the only kernel-side knob.)
+CONFIG_X86_VSYSCALL_EMULATION=y
+# 32-bit Windows binaries under Wine/Proton (Steam, the Rockstar launcher, many game
+# DLLs/EXEs) need the IA32 ABI. Already =y and NOT default-disabled; pinned explicit.
+CONFIG_IA32_EMULATION=y
 
 # ─────────────────────────────── Debug (Disabled) ───────────────────────────────
 CONFIG_DEBUG_KERNEL=n

@@ -21,6 +21,11 @@
 # host demo clips externally (YouTube / a release asset) and link them.
 *.mkv
 
+# ── Editor / torando timestamped backups ────────────────────────────────────
+*.bak
+*.bak-*
+*.bak.*
+
 # ── Misc ─────────────────────────────────────────────────────────────────────
 *.swp
 *~

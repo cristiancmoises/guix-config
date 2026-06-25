@@ -612,12 +612,7 @@
          (append
           '(("kernel.kptr_restrict"             . "2")
             ("kernel.dmesg_restrict"            . "1")
-            ;; ptrace_scope=1 (not 2): RDR2's Arxan anti-tamper self-debugs via
-            ;; PTRACE_TRACEME, which returns EPERM at scope 2 (capability-only) and
-            ;; makes the game clean-exit before a window. Scope 1 (relational: a
-            ;; process may trace only its own descendants) is the standard hardened
-            ;; default and lets it run. Revert to "2" to restore strictest hardening.
-            ("kernel.yama.ptrace_scope"         . "1")
+            ("kernel.yama.ptrace_scope"         . "2")
             ("kernel.unprivileged_bpf_disabled" . "1")
             ("net.core.bpf_jit_harden"          . "2")
             ("net.ipv4.tcp_congestion_control"  . "bbr")
@@ -632,11 +627,7 @@
             ;; off swap read-ahead clustering (zram is random-access; page-cluster
             ;; 0 = 1 page per fault, lower latency). Pairs with the zram service.
             ("vm.swappiness"                      . "180")
-            ("vm.page-cluster"                    . "0")
-            ;; RDR2/DXVK (and other big Vulkan games) need a high mmap count;
-            ;; Proton normally raises this itself but can't inside the no-CAP
-            ;; nonguix Steam container. 65530 (default) -> world-load crash.
-            ("vm.max_map_count"                   . "1048576"))
+            ("vm.page-cluster"                    . "0"))
           (sysctl-configuration-settings config)))))
       ;; Build daemon: send build scratch to /var/tmp (on the encrypted root disk),
       ;; NOT the new RAM-backed tmpfs /tmp. Large LOCAL builds (the custom

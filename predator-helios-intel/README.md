@@ -19,6 +19,19 @@
 > [!NOTE]
 > 🟢 **CURRENT machine.** This is the active daily driver. The previous **AMD Ryzen 3 2200G** desktop is archived at [`../ryzen-2200g-amd/`](../ryzen-2200g-amd/README.md). The full migration story (every config delta, with reasons) lives in [`../comparison.md`](../comparison.md); the repo-wide overview is in [`../README.md`](../README.md).
 
+> [!IMPORTANT]
+> **Two display-stack variants live side by side** (identical kernel, security, firewall, Tor, Mullvad, zram, tmpfs, audio — they differ *only* in the display server + login manager):
+>
+> | File | Display server | Login manager | Session WM |
+> |------|----------------|---------------|------------|
+> | [`config-xlibre.scm`](config-xlibre.scm) | XLibre 25.1.7 (X11) | SLiM | xmonad |
+> | [`config-sway.scm`](config-sway.scm) | **Sway / wlroots (Wayland)** | **greetd** (agreety text greeter) | **Sway** |
+>
+> `config.scm` is the **active** file and currently mirrors **`config-sway.scm`**. Because the laptop is MUX'd to the discrete NVIDIA RTX 4060 (no iGPU fallback), Sway is launched with `--unsupported-gpu` + an NVIDIA-Wayland env; `elogind` handles the seat (no `seatd`). The per-user `~/.config/sway/config` sets the `br/abnt2` keymap (Wayland ignores the OS `keyboard-layout`).
+>
+> **Apply Sway:** `sudo bash ~/promote-sway-config.sh` (backs up `/etc/config.scm` → `.xlibre.bak-*`, installs the Sway config), then from a **physical TTY** `sudo guix system reconfigure --fallback /etc/config.scm`.
+> **Revert to XLibre:** `sudo guix system roll-back` / pick the prior generation in GRUB, or reconfigure from `config-xlibre.scm`.
+
 ```text
 ┌─────────────────────────── HARDWARE ───────────────────────────┐
 │ Laptop   Acer Predator Helios Neo 16 (PHN16-71)                 │

@@ -9,28 +9,16 @@
 ;; PRESERVED VERBATIM from the installed laptop config: bootloader, ESP, the two
 ;; LUKS mapped-devices, the encrypted file-systems, and the "vmd" initrd module.
 ;;
-;; DISPLAY STACK (2026-06-21): this is the **Sway (Wayland)** variant. It drops
-;; the XLibre X server + SLiM display manager (kept in config-xlibre.scm) and
-;; replaces them with Sway driven by the greetd login manager (text greeter →
-;; sway). The laptop is MUX'd to the discrete NVIDIA RTX 4060 (the Intel iGPU is
-;; off — lspci shows only NVIDIA), so wlroots must drive the proprietary GPU:
-;; sway is launched with --unsupported-gpu and NVIDIA-Wayland env (see
-;; %sway-session-env + the greetd service). nvidia_drm.modeset=1 (required for
-;; the GBM path) is injected by nonguix-transformation-nvidia at the foot of the
-;; file. Everything else (kernel, security hardening, firewall, Tor, Mullvad,
-;; zram, tmpfs /tmp, audio firmware) is identical to the XLibre variant.
-;;
 ;; PERF (2026-06-08): CPU pacing changed from a pinned 'performance' governor to
 ;; intel_pstate 'powersave' + EPP balance_performance (laptop thermals); plus
 ;; init_on_free=0 and numa_balancing=disable on the cmdline. See the CPU-pacing
 ;; service and the kernel-arguments block.
 ;;
-;; Apply (from a physical TTY — reconfigure restarts the login manager and drops
-;; the running graphical session; if Sway fails to start you fall back to a TTY):
+;; Apply:
 ;;   sudo guix system reconfigure /etc/config.scm
 ;;
 ;; Maintainer: Cristian Cezar Moisés
-;; Last Updated: June 21, 2026 (Sway/greetd variant)
+;; Last Updated: June 08, 2026
 
 ;;; ──────────────────────────────────────────────────────────────────────────
 ;;; Module Imports
@@ -51,15 +39,14 @@
  (srfi srfi-1)
 
  ;; Display / GPU
- (gnu services xorg)             ; retained only for gdm-service-type (deleted from %desktop-services below)
+ (gnu services xorg)             ; %default-xorg-modules, set-xorg-configuration
  (gnu packages gl)
  (gnu packages vulkan)
  (gnu packages graphics)         ; mangohud
  (gnu packages xorg)
  (gnu packages xdisorg)
  (gnu packages compton)
- ;; (xlibre) removed — the Sway variant uses no X server. See config-xlibre.scm
- ;; for the XLibre + SLiM stack.
+ (xlibre)                        ; XLibre X server + forked input/video drivers (guix-xlibre channel)
 
  ;; NVIDIA (nonguix)
  (nongnu packages nvidia)        ; nvidia-driver, nvda
@@ -134,6 +121,17 @@
  (gnu packages tor)
  (gnu packages vpn)
  (small-guix packages mullvad)
+
+ ;; securityops channel — latest-version overrides for the curated apps:
+ ;;   kitty 0.47.4 (gnu 0.46.2), tor 0.4.9.9 (gnu 0.4.9.8),
+ ;;   mullvad-vpn-desktop 2026.3 (small-guix 2025.8).  Prefixed `so:' so the
+ ;;   bare gnu/small-guix bindings stay available; only the so:… symbols below
+ ;;   are switched to the channel.
+ ((securityops packages terminals) #:prefix so:)   ; so:kitty
+ ((securityops packages tor)       #:prefix so:)   ; so:tor
+ ((securityops packages vpn)       #:prefix so:)   ; so:mullvad-vpn-desktop
+ ((securityops packages browsers)  #:prefix so:)   ; so:librewolf 152.0.1-2 (gnu 151.0.4-1)
+ (securityops services torando)                    ; torando-gui-service-type (Shepherd)
  (gnu packages curl)
  (gnu packages ssh)
  (gnu packages antivirus)
@@ -148,7 +146,6 @@
  (gnu packages file-systems)
 
  ;; Multimedia / audio
- (gnu packages image)            ; grim, slurp (Wayland screenshots)
  (gnu packages image-viewers)
  (gnu packages audio)
  (gnu packages pulseaudio)
@@ -200,7 +197,6 @@
  (gnu services admin)
  (gnu services pm)               ; thermald-service-type
  (small-guix services mullvad)
- (securityops services torando)  ; torando-gui-service-type (Shepherd)
  (gnu system shadow))
 
 (use-service-modules
@@ -232,61 +228,149 @@
 ;;; Keyboard layout (build once; the field name shadows the constructor inside records)
 (define %kbd (keyboard-layout "br" "abnt2"))
 
-;;; Session environment: global GL/GBM vendor selection (login-wide)
+;;; Session environment: NVIDIA + Intel GLX/EGL/VAAPI
 ;;; ──────────────────────────────────────────────────────────────────────────
-;; Only the vendor-selection vars that are safe for EVERY login (the Sway
-;; Wayland session AND XWayland clients AND plain TTY logins) live here. The
-;; Wayland *application* backend hints (GDK/QT/MOZ/WLR_*) are deliberately NOT
-;; global — they belong to the graphical session only and are set on the greetd
-;; Sway session via %sway-session-env, so a bare TTY login is never told to use
-;; a Wayland backend that isn't there.
 (define gpu-env-service
   (simple-service
    'gpu-env-vars
    session-environment-service-type
    '(("LIBGL_DRI3_ENABLE"          . "1")
      ("__GLX_VENDOR_LIBRARY_NAME"  . "nvidia")
-     ("GBM_BACKEND"                . "nvidia-drm"))))
+     ("GBM_BACKEND"                . "nvidia-drm")
+     ("MOZ_X11_EGL"                . "1")
+     ("MOZ_WEBRENDER"              . "1")
+     ("MOZ_ENABLE_WAYLAND"         . "0")
+     ("CLUTTER_BACKEND"            . "x11")
+     ("GDK_BACKEND"                . "x11")
+     ("QT_QPA_PLATFORM"            . "xcb")
+     ("QT_XCB_GL_INTEGRATION"      . "xcb_glx")
+     ("QT_OPENGL"                  . "desktop"))))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
-;;; Sway (Wayland) session environment — NVIDIA proprietary on a MUX'd laptop
+;;; XLibre X server (latest 25.1.7) + enhanced single-GPU NVIDIA configuration
 ;;; ──────────────────────────────────────────────────────────────────────────
-;; The discrete RTX 4060 is the ONLY GPU the OS sees (the Intel iGPU is MUX'd
-;; off — lspci shows one GPU), so wlroots has to drive the proprietary NVIDIA
-;; blob. wlroots refuses NVIDIA by default; sway is therefore started with
-;; --unsupported-gpu (and the equivalent SWAY_UNSUPPORTED_GPU=true below). The
-;; GBM path also needs nvidia_drm.modeset=1, which nonguix-transformation-nvidia
-;; injects on the kernel command line at the foot of this file.
-;;
-;; These vars are attached ONLY to the greetd Sway user-session (extra-env), not
-;; to the global session-environment, so a plain TTY login is never pushed onto
-;; a Wayland backend. Each native-Wayland app hint carries an X11/XWayland
-;; fallback so apps lacking a Wayland backend still run.
-(define %sway-session-env
-  '(;; wlroots on the NVIDIA blob: the hardware cursor plane is broken, so force
-    ;; a software cursor — otherwise the pointer is invisible or garbled.
-    ("WLR_NO_HARDWARE_CURSORS" . "1")
-    ;; GLES2 is the most compatible wlroots renderer on the NVIDIA blob.
-    ("WLR_RENDERER"            . "gles2")
-    ;; Belt-and-suspenders with the --unsupported-gpu command-line flag.
-    ("SWAY_UNSUPPORTED_GPU"    . "true")
-    ;; GBM/GLX vendor (also set globally; repeated so the session is self-contained).
-    ("GBM_BACKEND"               . "nvidia-drm")
-    ("__GLX_VENDOR_LIBRARY_NAME" . "nvidia")
-    ;; Desktop identity for xdg-desktop-portal / app theming.
-    ("XDG_CURRENT_DESKTOP" . "sway")
-    ("XDG_SESSION_DESKTOP" . "sway")
-    ;; Native-Wayland application backends, each with an X11/XWayland fallback.
-    ("MOZ_ENABLE_WAYLAND" . "1")
-    ("QT_QPA_PLATFORM"    . "wayland;xcb")
-    ("QT_WAYLAND_DISABLE_WINDOWDECORATION" . "1")
-    ("GDK_BACKEND"        . "wayland,x11")
-    ("CLUTTER_BACKEND"    . "wayland")
-    ("SDL_VIDEODRIVER"    . "wayland")
-    ("ELM_DISPLAY"        . "wl")
-    ("_JAVA_AWT_WM_NONREPARENTING" . "1")
-    ;; Chromium/Electron (google-chrome): use the Wayland/Ozone path.
-    ("NIXOS_OZONE_WL"     . "1")))
+;; The guix-xlibre channel ships xlibre-server 25.1.5; bump the *source* to the
+;; upstream-tagged 25.1.7 release (June 2026 security/stability patches: input
+;; NULL-deref, keyboard-config bounds, GLX overflow, XTest OOB). The Fedora
+;; "intel-only-on-pre-gen4" patch carried by the channel source is preserved
+;; (inherited origin). NVIDIA proprietary DDX loads as-is via XLibre's in-server
+;; ABI shim — no driver rebuild needed.
+(define xlibre-server-latest
+  (package
+    (inherit xlibre-server)
+    (version "25.1.7")
+    (source
+     (origin
+       (inherit (package-source xlibre-server))
+       (uri (git-reference
+             (url "https://github.com/X11Libre/xserver")
+             (commit "xlibre-xserver-25.1.7")))
+       (sha256
+        (base32 "0d3v7zcab1lx1g2sv9qsvy2jwarz6c2slnzx0id1c3sy4b5g9cda"))
+       (file-name (git-file-name "xlibre-server" "25.1.7"))))))
+
+;; Rebuild every XLibre input/video module against the 25.1.7 server so their
+;; loadable-module ABI (XINPUT 26 / VIDEODRV 28) matches the server exactly.
+;; (Stock Guix xf86-input-* are XINPUT 24 and WOULD be rejected — that is the
+;; reason we must use XLibre's forked drivers, not %default-xorg-modules.)
+(define %xlibre-bump
+  (package-input-rewriting/spec
+   (list (cons "xlibre-server" (lambda _ xlibre-server-latest)))
+   #:deep? #t))
+
+(define %xlibre-modules-latest
+  (map %xlibre-bump %default-xlibre-modules))
+
+;; Enhanced, single-discrete-GPU NVIDIA layout. The Intel iGPU is MUX'd off on
+;; this machine (lspci shows only the RTX 4060), so X sees exactly one GPU;
+;; AutoAddGPU=false + a single-Screen ServerLayout keep XLibre from probing a
+;; phantom second screen (the un-fixed Optimus AddScreen path). Tear-free desktop
+;; via ForceFullCompositionPipeline; high-quality libinput touchpad/pointer.
+;; (Keyboard br/abnt2 is handled by (keyboard-layout %kbd) below.)
+(define %xlibre-nvidia-xorg-config "\
+Section \"ServerFlags\"
+    Option \"AutoAddGPU\" \"false\"
+EndSection
+
+Section \"OutputClass\"
+    Identifier  \"nvidia\"
+    MatchDriver \"nvidia-drm\"
+    Driver      \"nvidia\"
+EndSection
+
+Section \"Device\"
+    Identifier \"nvidia\"
+    Driver     \"nvidia\"
+    Option     \"TripleBuffer\" \"on\"
+EndSection
+
+Section \"Screen\"
+    Identifier \"nvidia\"
+    Device     \"nvidia\"
+    Option     \"AllowEmptyInitialConfiguration\"
+    Option     \"UseNvKmsCompositionPipeline\" \"On\"
+    Option     \"metamodes\" \"nvidia-auto-select +0+0 {ForceFullCompositionPipeline=On}\"
+EndSection
+
+Section \"ServerLayout\"
+    Identifier \"layout\"
+    Screen 0 \"nvidia\"
+EndSection
+
+Section \"InputClass\"
+    Identifier      \"touchpad-quality\"
+    MatchIsTouchpad \"on\"
+    Driver          \"libinput\"
+    Option \"Tapping\"            \"on\"
+    Option \"TappingDrag\"        \"on\"
+    Option \"NaturalScrolling\"   \"true\"
+    Option \"ScrollMethod\"       \"twofinger\"
+    Option \"ClickMethod\"        \"buttonareas\"
+    Option \"DisableWhileTyping\" \"on\"
+    Option \"MiddleEmulation\"    \"on\"
+    Option \"AccelProfile\"       \"adaptive\"
+EndSection
+
+Section \"InputClass\"
+    Identifier     \"pointer-quality\"
+    MatchIsPointer \"on\"
+    Driver         \"libinput\"
+    Option \"AccelProfile\" \"flat\"
+EndSection
+")
+
+;; Shared XLibre xorg-configuration, consumed by the SLiM display manager
+;; (services section). Same record type GDM's (xorg-configuration ...) field
+;; takes; SLiM is X11-only so no (wayland? ...) toggle is involved. Keeping it
+;; in one define means the server / ABI-matched modules / NVIDIA Device-Screen
+;; layout are declared exactly once.
+(define %xlibre-xorg-configuration
+  (xorg-configuration
+   (keyboard-layout %kbd)
+   (server xlibre-server-latest)
+   (modules (cons nvidia-driver %xlibre-modules-latest))
+   (extra-config (list %xlibre-nvidia-xorg-config))))
+
+;; SLiM greeter theme: the securityops logo as the login background. We start
+;; from the stock Guix theme (%default-slim-theme / "1.x") so the login panel,
+;; fonts and field positions stay known-good, and swap ONLY background.png for
+;; ~/wallpapers/sec.png. sec.png is 1920x1080 and the inherited slim.theme uses
+;; background_style "stretch", so it fills the panel 1:1. Selected below via
+;; (theme %securityops-slim-theme) + (theme-name "securityops").
+(define %securityops-slim-theme
+  (computed-file "securityops-slim-theme"
+    (with-imported-modules '((guix build utils))
+      #~(begin
+          (use-modules (guix build utils))
+          (let ((dst (string-append #$output "/securityops"))
+                (src (string-append #$%default-slim-theme "/"
+                                    #$%default-slim-theme-name)))
+            (mkdir-p dst)
+            (copy-recursively src dst)
+            (let ((bg (string-append dst "/background.png")))
+              (when (file-exists? bg) (delete-file bg))
+              (copy-file #$(local-file "/home/berkeley/wallpapers/sec.png")
+                         bg)))))))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
 ;;; Operating system
@@ -384,7 +468,7 @@
     (list openresolv)
 
     ;; Browsers & apps
-    (list librewolf
+    (list librewolf               ; TEMP revert (was so:librewolf) until daemon builds on /var/tmp
           icecat
           steam-nvidia)          ; NVIDIA-aware Steam FHS container (nonguix)
 
@@ -399,22 +483,13 @@
           vulkan-loader
           nvda                         ; nvidia-smi / nvidia-settings
           linux-firmware
-          ;; ── Sway / Wayland desktop (now the PRIMARY session) ───────────────
-          sway                         ; the compositor
-          swaybg                       ; wallpaper
-          waybar                       ; status bar
-          wmenu                        ; provides wmenu-run — the $menu in sway's default config
-          fuzzel                       ; nicer app launcher (alternative to wmenu)
-          mako                         ; notification daemon
-          grim                         ; screenshots
-          slurp                        ; region selection (pairs with grim)
-          wl-clipboard                 ; wl-copy / wl-paste
-          swayidle                     ; idle management (lock/dpms)
-          swaylock                     ; screen locker
-          wlr-randr                    ; query/set Wayland outputs from the CLI
-          kanshi                       ; auto output profiles on hotplug
-          wdisplays                    ; GUI output layout (the Wayland 'arandr')
-          xorg-server-xwayland         ; run X11 apps under Sway
+          ;; Wayland bits (secondary; Xmonad/X11 is primary)
+          sway
+          waybar
+          wl-clipboard
+          swayidle
+          swaylock
+          xorg-server-xwayland
           brightnessctl
           openrgb)
 
@@ -475,7 +550,7 @@
           strace
           edk2-tools
           alacritty
-          kitty
+          so:kitty               ; securityops channel: 0.47.4 (gnu 0.46.2) — Go deps packaged
           foot
           fish
           bat
@@ -496,7 +571,7 @@
           libfido2
           firejail
           openvpn
-          tor
+          so:tor                 ; securityops channel: 0.4.9.9 (gnu 0.4.9.8)
           torsocks
           nmap
           wireshark
@@ -574,12 +649,13 @@
   (list (extra-special-file "/lib64/ld-linux-x86-64.so.2"
                             (file-append glibc "/lib/ld-linux-x86-64.so.2")))
 
-  ;; Login manager: greetd (replaces SLiM/GDM). GDM is deleted from
-  ;; %desktop-services; the greetd service is added to the service list below and
-  ;; launches Sway after a text-mode login. %desktop-services still provides
-  ;; elogind, which registers the logind session greetd opens — that is what
-  ;; gives wlroots (via libseat) DRM master + input on this seat, so no separate
-  ;; seatd service is required.
+  ;; Display manager: SLiM (replaces GDM). SLiM is X11-only and minimalist, so
+  ;; it drives XLibre directly — there is no Wayland greeter that could silently
+  ;; bypass the X server (the reason GDM needed (wayland? #f)). The XLibre
+  ;; server / ABI-matched modules / NVIDIA layout live in
+  ;; %xlibre-xorg-configuration (defined above) and are handed to SLiM's
+  ;; (xorg-configuration ...) field in the service list below. GDM is deleted
+  ;; from %desktop-services so only SLiM manages the display.
   (modify-services %desktop-services
     (delete gdm-service-type)
       ;; Laptop lid: DO NOTHING on close. elogind's default HandleLidSwitch is
@@ -640,7 +716,7 @@
           (sysctl-configuration-settings config)))))
       ;; Build daemon: send build scratch to /var/tmp (on the encrypted root disk),
       ;; NOT the new RAM-backed tmpfs /tmp. Large LOCAL builds (the custom
-      ;; securityops kernel, wlroots/sway, anything bordeaux lacks under Tor
+      ;; securityops kernel, xlibre-server, anything bordeaux lacks under Tor
       ;; --fallback) write GBs of scratch; on a tmpfs that would consume RAM and
       ;; OOM. Disk /var/tmp (~91G free) keeps them safe while /tmp stays a fast RAM
       ;; scratch for everything else. tmpdir is guix-daemon's dedicated field.
@@ -650,37 +726,18 @@
         (tmpdir "/var/tmp"))))
 
     (list
-     ;; ── Login manager: greetd → Sway (replaces SLiM/XLibre, replaces GDM) ──
-     ;; A *text* greeter (agreety) runs on vt7 — no compositor at the login
-     ;; stage, so none of the wlroots-on-NVIDIA fragility applies until the real
-     ;; session starts. On a successful login greetd execs Sway directly as the
-     ;; authenticated user with:
-     ;;   * --unsupported-gpu  — wlroots will not drive the proprietary NVIDIA
-     ;;     blob without it, and this MUX'd laptop has no other GPU;
-     ;;   * %sway-session-env  — NVIDIA-Wayland env (software cursor, GBM/GLX
-     ;;     vendor, native-Wayland app backends with XWayland fallback);
-     ;;   * XDG_SESSION_TYPE=wayland (set by the greetd user-session helper).
-     ;; tty1–6 keep their normal gettys; greetd takes vt7 (the VT SLiM used).
-     ;; If Sway ever fails to come up you simply land back on a TTY — switch with
-     ;; Ctrl+Alt+F1..F6 and reconfigure/rollback from there.
-     (service greetd-service-type
-       (greetd-configuration
-        ;; video+input let a *graphical* greeter (if you later switch to
-        ;; wlgreet/gtkgreet) reach DRM/evdev; harmless for the agreety greeter.
-        (greeter-supplementary-groups (list "video" "input"))
-        (terminals
-         (list
-          (greetd-terminal-configuration
-           (terminal-vt "7")
-           (terminal-switch #t)
-           (default-session-command
-             (greetd-agreety-session
-              (command
-               (greetd-user-session
-                (command (file-append sway "/bin/sway"))
-                (command-args '("--unsupported-gpu"))
-                (xdg-session-type "wayland")
-                (extra-env %sway-session-env))))))))))
+     ;; Display manager: SLiM driving XLibre. (xorg-configuration ...) takes the
+     ;; shared %xlibre-xorg-configuration (defined near the top). Replaces GDM.
+     ;; X11-only greeter on vt7; pre-fills the username but still prompts for
+     ;; the password (no auto-login).
+     (service slim-service-type
+       (slim-configuration
+        (xorg-configuration %xlibre-xorg-configuration)
+        (theme %securityops-slim-theme)
+        (theme-name "securityops")
+        (auto-login? #f)
+        (default-user "berkeley")
+        (vt "vt7")))
 
      ;; NVIDIA proprietary stack (configured driver/module/firmware/powerd) is
      ;; added by nonguix-transformation-nvidia at the bottom of this file.
@@ -742,15 +799,32 @@
               (stop #~(make-kill-destructor))
               (auto-start? #f))))
 
-     ;; Tighten /home and /var/lib/aide perms at boot.
+     ;; Tighten /home and /var/lib/aide perms at boot. Also make /etc/resolv.conf
+     ;; world-readable: NetworkManager/Mullvad write it 0600 root-only, which
+     ;; breaks DNS for any non-root process that can't reach nscd — notably Steam
+     ;; inside its nonguix FHS container (nscd isn't shared there; sharing it
+     ;; breaks RDR2 audio). Without a readable resolv.conf, glibc in the container
+     ;; finds no nameserver and every Steam CM connect fails instantly
+     ;; ("neterror - Invalid"), leaving Steam stuck OFFLINE. 0644 is the universal
+     ;; default and exposes only which DNS server is used — no secrets, no effect
+     ;; on the VPN tunnel/kill-switch. (mcron 'resolv-conf-readable below
+     ;; re-applies this every minute so it survives Mullvad reconnects.)
      (simple-service 'file-permissions shepherd-root-service-type
        (list (shepherd-service
               (provision '(file-permissions))
               (start #~(make-forkexec-constructor
                         '("/bin/sh" "-c"
-                          "chmod 751 /home && chmod 750 /var/lib/aide")))
+                          "chmod 751 /home && chmod 750 /var/lib/aide; chmod 0644 /etc/resolv.conf 2>/dev/null || true")))
               (stop #~(make-kill-destructor))
               (auto-start? #t))))
+
+     ;; Keep /etc/resolv.conf world-readable so Steam (and anything else in the
+     ;; nonguix FHS container, which has no nscd) can resolve DNS. Mullvad/NM
+     ;; rewrite it 0600 on every (re)connect; re-chmod it at the top of each
+     ;; minute. See the 'file-permissions service above for the full rationale.
+     (simple-service 'resolv-conf-readable mcron-service-type
+       (list #~(job '(next-minute)
+                    "chmod 0644 /etc/resolv.conf 2>/dev/null || true")))
 
      ;; Bluetooth.
      (service bluetooth-service-type
@@ -846,8 +920,12 @@ table inet filter {
          ("QT_QUICK_CONTROLS_STYLE" . "Fusion")
          ("QT_ENABLE_HIGHDPI_SCALING" . "0")))
 
-     ;; Mullvad VPN daemon
-     (service mullvad-daemon-service-type)
+     ;; Mullvad VPN daemon — pointed at the securityops channel package
+     ;; (2026.3 stable) so the running daemon matches the curated channel set
+     ;; instead of small-guix's older 2025.8 default.
+     (service mullvad-daemon-service-type
+              (mullvad-daemon-configuration
+               (mullvad-vpn-desktop so:mullvad-vpn-desktop)))
 
      ;; Containers.
      (service docker-service-type)
