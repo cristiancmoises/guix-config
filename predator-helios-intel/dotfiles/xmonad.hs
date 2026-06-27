@@ -19,7 +19,7 @@ import XMonad.Layout.WindowArranger
 import XMonad.Layout.Decoration (Theme(..), decoHeight)
 import Data.List (find)
 import Control.Monad (when)
-import System.Environment (setEnv)
+import System.Environment (setEnv, getEnv, lookupEnv)
 
 -- Simplified doFullFloat
 doFullFloat :: ManageHook
@@ -40,11 +40,26 @@ myConfig = def
   , focusedBorderColor = "#000000"
   , manageHook = myManageHook
   , startupHook = do
-      -- Source Guix environment to ensure PATH and other variables are set
-      spawn "bash -c 'source $HOME/.guix-home/setup-environment; export PATH'"
+      -- FIX (modkey "sometimes doesn't work"): put the Guix profiles on xmonad's
+      -- OWN PATH here, in-process. The previous `spawn "bash -c 'source ...'"` ran
+      -- in a throwaway subshell and NEVER touched xmonad's environment, so every
+      -- keybinding that spawned a *bare* command (rofi, scrot, kitty, wezterm-gui,
+      -- mullvad-vpn, ...) silently failed to find its binary — which feels exactly
+      -- like "the mod key did nothing", while binds with absolute paths worked.
+      -- setEnv runs in-process, so it propagates to every app xmonad spawns after.
+      io $ do
+        home  <- getEnv "HOME"
+        mpath <- lookupEnv "PATH"
+        let prefix = home ++ "/.guix-home/profile/bin:"
+                  ++ home ++ "/.config/guix/current/bin:"
+                  ++ "/run/setuid-programs:"
+                  ++ "/run/current-system/profile/bin:"
+                  ++ home ++ "/.local/bin"
+        setEnv "PATH" (maybe prefix (\p -> prefix ++ ":" ++ p) mpath)
+        setEnv "DRI_PRIME" "1"   -- GPU offload, inherited by every spawned app
       spawn "xrandr --dpi 200"
-      io $ setEnv "DRI_PRIME" "1"  -- set in xmonad's env so every spawned app inherits GPU offload
-      spawn "modprobe -r dccp sctp rds tipc"
+      -- (dccp/sctp/rds/tipc are already blacklisted on the kernel cmdline; the old
+      --  `modprobe -r` spawn needed root and silently failed, so it is dropped.)
       spawn "xrandr --output HDMI-A-0 --mode 3280x1200 --rate 60.00"
       spawn "/home/berkeley/.local/bin/brightness-step restore" -- re-apply last saved screen brightness
       spawn "xrdb /home/berkeley/.Xresources"
@@ -76,7 +91,7 @@ keyBinds =
   , ("M-l", sendToEmptyWorkspace)
   , ("M-t", viewEmptyWorkspace)
   , ("M-z", spawn "/home/berkeley/.guix-home/profile/bin/flameshot gui")
-  , ("M-we", spawn "/home/berkeley/.guix-home/profile/bin/chromium")
+  , ("M-w", spawn "/home/berkeley/.guix-home/profile/bin/chromium")  -- was "M-we" (typo): an invalid EZConfig key string that mkKeymap silently drops
   , ("M-v", easySwap)
   , ("M-j", spawn "scrot")
   , ("M-k", spawn "~/scripts/tmp.sh")

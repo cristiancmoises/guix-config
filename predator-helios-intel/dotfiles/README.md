@@ -1,0 +1,97 @@
+# Predator — dotfiles
+
+Per-user dotfiles for the two display-stack variants ([see the variant table](../README.md#️-sway-wayland-vs-xlibre-x11--benefits--differences)):
+
+| File | Used by | Purpose |
+|------|---------|---------|
+| [`xmonad.hs`](./xmonad.hs) | **XLibre / X11** variant | xmonad window-manager config (`~/.xmonad/xmonad.hs`) |
+| [`sway/config`](./sway/config) | **Sway / Wayland** variant | Sway config (`~/.config/sway/config`) |
+| [`brightness-step`](./brightness-step) | XLibre | two-stage screen dimmer (backlight + xrandr gamma) |
+| [`dual-monitor`](./dual-monitor) | XLibre | HDMI/DP hotplug helper |
+| [`rofi-brightness.sh`](./rofi-brightness.sh) | XLibre | rofi brightness applet |
+| [`gaming/`](./gaming/) | both | RDR2 / GTA V Proton tuning, Steam reconnect, vkBasalt |
+
+---
+
+## 🩹 xmonad — fixing the "mod key sometimes stops working"
+
+**Symptom:** the Super (mod) key occasionally does nothing; xmonad seems to "stop working."
+
+**Root causes found & fixed in `xmonad.hs`:**
+
+1. **PATH was never set in xmonad's own environment (main cause).** The old
+   `startupHook` ran `spawn "bash -c 'source …/setup-environment; export PATH'"`.
+   `spawn` forks a **throwaway subshell** — the `export` died with it and xmonad's
+   environment was never touched. So every keybinding that launches a **bare
+   command** (`rofi` on `M-d`, `scrot`, `kitty`, `wezterm-gui`, `mullvad-vpn`, …)
+   silently failed to find its binary, while binds using **absolute paths** worked.
+   That is exactly what "the mod key sometimes works, sometimes not" feels like —
+   it depends on which binding you press.
+   **Fix:** set PATH (and `DRI_PRIME`) **in-process** with `io $ setEnv "PATH" …`
+   at the top of `startupHook`, so every later `spawn` inherits it.
+
+2. **`M-we` typo** (was `M-w` for steam): `"M-we"` is an invalid EZConfig key
+   string, which `mkKeymap` **silently drops** — so that binding did nothing.
+   **Fix:** corrected to `M-w` (launches chromium).
+
+3. Removed a `spawn "modprobe -r …"` that needs root and always failed silently
+   (those modules are already blacklisted on the kernel command line).
+
+**Runtime causes (not config bugs) — how to recover:**
+
+- **fcitx5 (IME) grabbing keys.** When an app has input-method focus, fcitx5 can
+  swallow key events. If the mod key dies inside one app, click another window, or
+  set fcitx5's trigger key off `Super` in `~/.config/fcitx5/config`.
+- **A fullscreen app (game/video) holds the keyboard grab** — the mod key won't
+  reach xmonad until you leave fullscreen. Use the app's windowed mode, or
+  `Ctrl+Alt+F2` → kill it.
+- **`M-v` (EasyMotion `selectWindow`) is modal** — it grabs the keyboard and waits
+  for a selection; press `Escape` to cancel if the overlay didn't appear.
+- **Hard reset:** `M-S-r` recompiles + restarts xmonad (`xmonad --recompile &&
+  xmonad --restart`); re-grabs all keys.
+
+**Apply after editing:** `xmonad --recompile && xmonad --restart` (or `M-S-r`).
+This config is validated — it recompiles clean against xmonad 0.18 / xmonad-contrib.
+
+---
+
+## ⌨️ Keybind parity — xmonad ↔ Sway
+
+The Sway config reproduces the xmonad keybinds **1:1** so muscle memory carries
+over. X11-only commands are swapped for the Wayland-native equivalent. `$mod` =
+`Super`. Bindings that collided with Sway's stock focus/layout keys were
+overridden on purpose, and the displaced ops relocated (see the table's notes).
+
+| Key | xmonad (X11) | Sway (Wayland) | Note |
+|-----|--------------|----------------|------|
+| `M-Return` / `M-0` / `M-a` | wezterm | `exec wezterm` | |
+| `M-o` | wezterm → `batata.sh` | same | |
+| `M-r` | wezterm → `turborecorder` | same | Sway resize-mode → `$mod+Shift+r` |
+| `M-d` | `rofi -show run` | `exec fuzzel` | rofi is X11 → **fuzzel** is the Wayland launcher |
+| `M-e` | librewolf | `exec librewolf` | Sway split-toggle → `$mod+Shift+s` |
+| `M-w` | chromium | `exec chromium` | Sway tabbed → `$mod+Shift+w` |
+| `M-m` | cmus (in kitty) | `exec kitty -e cmus` | |
+| `M-p` | openshot | `exec openshot-qt` | |
+| `M-k` | `~/scripts/tmp.sh` | same | |
+| `M-ç` | noisetorch | `exec … noisetorch` | the ABNT2 `ç` key = keysym `ccedilla` |
+| `M-i` / `M-n` / `M-j` | scrot | `exec grim …png` | scrot is X11 → **grim** |
+| `M-z` | flameshot gui | `exec flameshot gui` | |
+| `M-q` | kill window | `kill` | |
+| `M-b` | toggle xmobar struts | `exec killall -SIGUSR1 waybar` | SIGUSR1 toggles waybar |
+| `M-h` | shrink master | `resize shrink width` | |
+| `M-Tab` | focus next | `focus next` | |
+| `M-1`…`9` / `M-S-1`…`9` | workspace / move-to-ws | same | Sway ws10 (`$mod+0`) dropped (xmonad has 9) |
+| arrows | — | focus / move | **focus/move is on arrows** since `h/j/k/l` are app/lock binds |
+| `XF86MonBrightness{Up,Down}` | `brightness-step` (xrandr gamma) | `brightnessctl` | gamma is X11-only → brightnessctl on Wayland |
+
+### Bindings with **no Sway equivalent** (flagged in the config)
+
+| xmonad | Why no equivalent | What Sway does instead |
+|--------|-------------------|------------------------|
+| `M-l` — send-to-empty-workspace | Sway has no "empty workspace" primitive | `M-l` keeps **swaylock** (screen lock); use `$mod+Shift+<n>` to move to a workspace |
+| `M-t` — view-empty-workspace | same | unbound; use `$mod+<n>` |
+| `M-v` — EasyMotion window-swap | no EasyMotion on wlroots | `$mod+v` = `splitv` |
+| `M-f` — `W.sink` (un-float) | — | `$mod+f` = **fullscreen** (more useful); `$mod+Shift+space` un-floats |
+
+**Apply after editing the Sway config:** `$mod+Shift+c` (reload) — or
+`swaymsg reload`. Validate offline with `sway --validate -c ~/.config/sway/config`.

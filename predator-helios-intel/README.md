@@ -84,6 +84,8 @@ Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram,
 
 > Switch with `~/promote-sway-config.sh` (Sway) or reconfigure from `config-xlibre.scm`; both are one `guix system roll-back` away from each other.
 
+**Keybinds & dotfiles:** the xmonad and Sway configs live in [`dotfiles/`](./dotfiles/) with a full **xmonad ↔ Sway keybind-parity map** and the writeup of the **xmonad "mod key sometimes stops working" fix** (PATH was never set in xmonad's process) — see [`dotfiles/README.md`](./dotfiles/README.md).
+
 <br>
 
 ## 🎮 Graphics — NVIDIA + Intel hybrid

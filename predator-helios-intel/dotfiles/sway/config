@@ -1,0 +1,184 @@
+# ~/.config/sway/config — securityops Sway (Wayland) session
+# Starter config — customize freely. Reload in-session with $mod+Shift+c.
+# Docs: man 5 sway, man 5 sway-input, man 5 sway-output.
+#
+# Why this file exists: Wayland/Sway does NOT read the OS-level (keyboard-layout
+# "br" "abnt2") from /etc/config.scm — that only covers the console/bootloader.
+# Without the `input` block below, Sway would default to a US layout. Everything
+# here is a per-user dotfile; the system config (config.scm) is unaffected.
+
+### Variables ###############################################################
+set $mod  Mod4
+set $term foot
+# App launcher (fuzzel is installed; wmenu-run is sway's built-in default):
+set $menu fuzzel
+# Directional keys, vim-style + arrows:
+set $left  h
+set $down  j
+set $up    k
+set $right l
+
+### Input ###################################################################
+# Keyboard: Brazilian ABNT2 (matches the OS keyboard-layout). Toggle a US group
+# with both Shift keys if you ever need it.
+input type:keyboard {
+    xkb_layout  "br"
+    xkb_variant "abnt2"
+    # xkb_options "grp:shifts_toggle"   # uncomment to add a us toggle group
+}
+
+# Touchpad — ports the libinput tuning from the old XLibre InputClass.
+input type:touchpad {
+    tap             enabled
+    drag            enabled
+    natural_scroll  enabled
+    scroll_method   two_finger
+    click_method    button_areas
+    dwt             enabled            # disable-while-typing
+    middle_emulation enabled
+    accel_profile   adaptive
+}
+
+input type:pointer {
+    accel_profile flat
+}
+
+### Output / wallpaper ######################################################
+# Reuse the securityops login wallpaper. `swaymsg -t get_outputs` lists names if
+# you want a per-output resolution/position line, e.g.:
+#   output eDP-1 resolution 1920x1080 position 0,0
+output * bg /home/berkeley/wallpapers/sec.png fill
+
+### Idle / lock #############################################################
+# Lock after 5 min, screens off after 10, lock before sleep.
+exec swayidle -w \
+    timeout 300  'swaylock -f -c 000000' \
+    timeout 600  'swaymsg "output * power off"' \
+    resume       'swaymsg "output * power on"' \
+    before-sleep 'swaylock -f -c 000000'
+
+### Autostart ###############################################################
+exec waybar          # status bar — config in ~/.config/waybar/{config.jsonc,style.css}
+exec mako
+# Input method (fcitx5 for Japanese IME — env vars are set by config.scm's
+# jp-ime-env service). Uncomment if fcitx5 is installed in your profile/home:
+# exec fcitx5 -d --replace
+
+### Key bindings — apps & session (mirrors ~/.xmonad keyBinds 1:1) #########
+# Reproduces the xmonad (XLibre variant) keybinds so muscle memory carries over.
+# X11-only commands are swapped for the Wayland-native equivalent (noted). These
+# deliberately override Sway's default focus/layout keys; the displaced ops are
+# relocated in the Layout section. 4 xmonad binds have NO Wayland equivalent and
+# are flagged. $mod = Super.
+
+# Terminals  (xmonad M-Return / M-0 / M-a -> wezterm)
+bindsym $mod+Return  exec /home/berkeley/.guix-home/profile/bin/wezterm
+bindsym $mod+0       exec /home/berkeley/.guix-home/profile/bin/wezterm
+bindsym $mod+a       exec /home/berkeley/.guix-home/profile/bin/wezterm
+bindsym $mod+o       exec /home/berkeley/.guix-home/profile/bin/wezterm -e /scripts/batata.sh
+bindsym $mod+r       exec /home/berkeley/.guix-home/profile/bin/wezterm -e /usr/bin/turborecorder
+
+# Launcher  (xmonad M-d = rofi; rofi is X11 -> fuzzel is the Wayland launcher)
+bindsym $mod+d       exec $menu
+
+# Browsers  (xmonad M-e / M-w)
+bindsym $mod+e       exec /home/berkeley/.guix-home/profile/bin/librewolf
+bindsym $mod+w       exec /home/berkeley/.guix-home/profile/bin/chromium
+
+# Media / tools  (xmonad M-m / M-p / M-k / M-ç)
+bindsym $mod+m        exec kitty -e /home/berkeley/.guix-home/profile/bin/cmus
+bindsym $mod+p        exec openshot-qt
+bindsym $mod+k        exec /home/berkeley/scripts/tmp.sh
+bindsym $mod+ccedilla exec /home/berkeley/.local/bin/noisetorch   # the ABNT2 "ç" key
+
+# Screenshots  (xmonad M-i / M-n / M-j = scrot -> grim;  M-z = flameshot)
+bindsym $mod+i       exec grim ~/Pictures/shot-$(date +%F-%H%M%S).png
+bindsym $mod+n       exec grim ~/Pictures/shot-$(date +%F-%H%M%S).png
+bindsym $mod+j       exec grim ~/Pictures/shot-$(date +%F-%H%M%S).png
+bindsym $mod+z       exec /home/berkeley/.guix-home/profile/bin/flameshot gui
+bindsym Print        exec grim - | wl-copy
+bindsym $mod+Print   exec grim -g "$(slurp)" - | wl-copy
+
+# Window / session  (xmonad M-q = kill, M-b = toggle bar)
+bindsym $mod+q       kill
+bindsym $mod+Shift+q kill
+bindsym $mod+b       exec killall -SIGUSR1 waybar    # xmonad M-b toggled the xmobar struts; SIGUSR1 toggles waybar
+bindsym $mod+l       exec swaylock -f -c 000000      # xmonad M-l = send-to-empty-workspace: NO sway equivalent; lock kept here
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+e exec swaynag -t warning \
+    -m 'Exit Sway and end the Wayland session?' \
+    -B 'Exit' 'swaymsg exit'
+
+# Brightness / volume — Wayland-native (xmonad used the X11 xrandr-gamma
+# brightness-step script, which cannot work under Wayland).
+bindsym XF86MonBrightnessUp   exec brightnessctl set +5%
+bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym XF86AudioRaiseVolume  exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+bindsym XF86AudioLowerVolume  exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym XF86AudioMute         exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+
+### Key bindings — focus / move ############################################
+# NOTE: vim-style $mod+h/j/k/l are NOT focus keys here — j/k are app binds
+# above (matching xmonad, which repurposed M-j/M-k), l is the lock, h shrinks
+# below. Focus/move use the ARROW keys (as in xmonad: focus via M-Tab + arrows).
+bindsym $mod+Left   focus left
+bindsym $mod+Down   focus down
+bindsym $mod+Up     focus up
+bindsym $mod+Right  focus right
+bindsym $mod+Tab    focus next                  # xmonad M-Tab cycles focus
+
+bindsym $mod+Shift+Left   move left
+bindsym $mod+Shift+Down   move down
+bindsym $mod+Shift+Up     move up
+bindsym $mod+Shift+Right  move right
+bindsym $mod+h            resize shrink width 10px   # xmonad M-h = shrink master
+
+### Workspaces #############################################################
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+# ($mod+0 is the wezterm bind above — workspace 10 dropped to match xmonad's 9 workspaces)
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+### Layout (xmonad-parity: b/w/e/a/r are app binds above; ops relocated) ###
+bindsym $mod+f             fullscreen
+bindsym $mod+s             layout stacking
+bindsym $mod+v             splitv              # NOTE: xmonad M-v = EasyMotion window-swap: NO sway equivalent
+bindsym $mod+Shift+b       splith              # relocated ($mod+b now toggles the bar)
+bindsym $mod+Shift+w       layout tabbed       # relocated ($mod+w now launches chromium)
+bindsym $mod+Shift+s       layout toggle split # relocated ($mod+e now launches librewolf)
+bindsym $mod+space         focus mode_toggle
+bindsym $mod+Shift+space   floating toggle     # closest to xmonad M-f "sink" (un-float)
+floating_modifier $mod normal
+
+### Resize mode (relocated: $mod+r now launches turborecorder) #############
+mode "resize" {
+    bindsym Left   resize shrink width 10px
+    bindsym Down   resize grow height 10px
+    bindsym Up     resize shrink height 10px
+    bindsym Right  resize grow width 10px
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+Shift+r mode "resize"
+
+### Status bar #############################################################
+# Waybar is launched once by `exec waybar` (Autostart, above) and reads
+# ~/.config/waybar/. Do NOT add a `bar { swaybar_command waybar }` block here:
+# sway would launch a SECOND, sway-managed waybar (as `waybar -b bar-0`) that
+# overlaps the exec'd one. One source of truth only.
