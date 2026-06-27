@@ -52,6 +52,14 @@ input type:pointer {
 #   output eDP-1 resolution 1920x1080 position 0,0
 output * bg /home/berkeley/wallpapers/sec.png fill
 
+### Borders / appearance ####################################################
+# No window titlebars — a thin 2px border only (shows focus, no title text).
+# Use `default_border none` instead if you want zero border at all.
+default_border          pixel 2
+default_floating_border pixel 2
+# Drop the border too when a workspace holds a single window (clean fullscreen-ish look).
+hide_edge_borders       smart
+
 ### Idle / lock #############################################################
 # Lock after 5 min, screens off after 10, lock before sleep.
 exec swayidle -w \
