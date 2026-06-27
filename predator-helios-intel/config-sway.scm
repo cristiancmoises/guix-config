@@ -686,6 +686,30 @@
             ("net.ipv6.conf.all.accept_redirects" . "0")
             ("net.ipv4.conf.all.accept_redirects" . "0")
             ("net.ipv4.conf.all.send_redirects"   . "0")
+            ;; ── Additional Lynis / KSPP hardening (all safe on a single-user
+            ;;    desktop; no extra logs, nothing that breaks gaming/dev) ──
+            ("kernel.kexec_load_disabled"                  . "1")  ; no runtime kernel swap
+            ("kernel.sysrq"                                . "0")  ; disable magic SysRq
+            ("kernel.perf_event_paranoid"                  . "2")  ; restrict unpriv perf (sudo perf still works)
+            ("kernel.randomize_va_space"                   . "2")  ; full ASLR
+            ("kernel.core_uses_pid"                        . "1")
+            ("fs.suid_dumpable"                            . "0")  ; no setuid core dumps
+            ("fs.protected_hardlinks"                      . "1")
+            ("fs.protected_symlinks"                       . "1")
+            ("fs.protected_fifos"                          . "2")
+            ("fs.protected_regular"                        . "2")
+            ("net.ipv4.tcp_syncookies"                     . "1")  ; SYN-flood protection
+            ("net.ipv4.icmp_echo_ignore_broadcasts"        . "1")
+            ("net.ipv4.icmp_ignore_bogus_error_responses"  . "1")
+            ("net.ipv4.conf.all.accept_source_route"       . "0")
+            ("net.ipv4.conf.default.accept_source_route"   . "0")
+            ("net.ipv4.conf.default.accept_redirects"      . "0")
+            ("net.ipv4.conf.default.send_redirects"        . "0")
+            ("net.ipv4.conf.all.secure_redirects"          . "0")
+            ("net.ipv4.conf.default.secure_redirects"      . "0")
+            ("net.ipv6.conf.default.accept_redirects"      . "0")
+            ("net.ipv6.conf.all.accept_source_route"       . "0")
+            ("net.ipv6.conf.default.accept_source_route"   . "0")
             ;; Memory/tmpfs perf: zram is fast compressed swap, so prefer it
             ;; aggressively (frees RAM for page cache + the tmpfs /tmp) and turn
             ;; off swap read-ahead clustering (zram is random-access; page-cluster
@@ -766,7 +790,27 @@
      ;; added by nonguix-transformation-nvidia at the bottom of this file.
 
      ;; Remote login (firewalled off below; defence in depth).
-     (service openssh-service-type)
+     ;; SSH hardened for Lynis (SSH-7408) + defence in depth. The firewall already
+     ;; drops inbound 22 and fail2ban guards it; this is key-only, no root, no
+     ;; forwarding. You PUSH with keys, so password login off is fine — flip
+     ;; password-authentication? back to #t only if you ever need to SSH *in* with
+     ;; a password.
+     (service openssh-service-type
+       (openssh-configuration
+        (permit-root-login #f)
+        (allow-empty-passwords? #f)
+        (password-authentication? #f)
+        (x11-forwarding? #f)
+        (extra-content
+         (string-append
+          "AllowAgentForwarding no\n"
+          "AllowTcpForwarding no\n"
+          "MaxAuthTries 3\n"
+          "LoginGraceTime 30\n"
+          "ClientAliveInterval 300\n"
+          "ClientAliveCountMax 2\n"
+          "PermitEmptyPasswords no\n"
+          "PermitUserEnvironment no\n"))))
 
      ;; Printing.
      (service cups-service-type)
