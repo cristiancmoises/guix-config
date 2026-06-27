@@ -301,9 +301,23 @@
     ("_JAVA_AWT_WM_NONREPARENTING" . "1")
     ;; Chromium/Electron (google-chrome): use the Wayland/Ozone path.
     ("NIXOS_OZONE_WL"     . "1")
-    ;; wlroots on the proprietary NVIDIA blob: disable atomic modesetting — the
-    ;; standard workaround for GBM/atomic-modeset bring-up failures on NVIDIA.
-    ("WLR_DRM_NO_ATOMIC"  . "1")))
+    ;; ── NVIDIA (driver 580) scanout / renderer tuning ─────────────────────────
+    ;; WLR_DRM_NO_ATOMIC was REMOVED on purpose: it forces the LEGACY DRM
+    ;; interface (a 470-era workaround) which disables explicit-modifier scanout
+    ;; on driver 580 and causes "Failed to intersect/union scanout formats" +
+    ;; "Failed to create swapchain" (the renderer comes up but the first KMS
+    ;; commit fails → "wl render errors"). Driver 580 supports atomic KMS
+    ;; (nvidia_drm.modeset=1 + fbdev=1 are set), so let wlroots use it.
+    ;;
+    ;; Force LINEAR (no-modifier) GBM buffers — the canonical NVIDIA fix so the
+    ;; renderer's buffer formats agree with the KMS scanout plane.
+    ("WLR_DRM_NO_MODIFIERS" . "1")
+    ;; Pin the DRM master to the NVIDIA primary node (single GPU → card0).
+    ("WLR_DRM_DEVICES"      . "/dev/dri/card0")
+    ;; Safety net: if GPU renderer init STILL fails, fall back to the pixman
+    ;; software renderer (slow) so you get a usable desktop instead of a black
+    ;; screen / greetd login-loop. Remove once the GPU renderer is confirmed.
+    ("WLR_RENDERER_ALLOW_SOFTWARE" . "1")))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
 ;;; Operating system
@@ -652,12 +666,17 @@
          (append
           '(("kernel.kptr_restrict"             . "2")
             ("kernel.dmesg_restrict"            . "1")
-            ;; Hardened ptrace_scope=2 (capability-only) — the secure default for
-            ;; this Sway variant. NOTE: RDR2's Arxan anti-tamper self-debugs via
-            ;; PTRACE_TRACEME and clean-exits at scope 2; to play it, lower at
-            ;; RUNTIME (no reconfigure, auto-reverts on reboot):
-            ;;   sudo sysctl kernel.yama.ptrace_scope=1
-            ("kernel.yama.ptrace_scope"         . "2")
+            ;; ptrace_scope=1 — yama "restricted/relational": a process may ptrace
+            ;; ONLY its own descendants (or with CAP_SYS_PTRACE). This is the
+            ;; STANDARD hardened default (Debian, Ubuntu, Arch-hardened all ship 1);
+            ;; yama IS still enforced — no process can arbitrarily attach to another,
+            ;; so the cross-process snooping ptrace_scope defends against is still
+            ;; blocked. We use 1 instead of the extra-strict 2 (capability-only) so
+            ;; RDR2 / GTA V (RAGE/Arxan) — whose anti-tamper self-debugs via
+            ;; PTRACE_TRACEME — launch on Steam WITHOUT a manual `sysctl` each
+            ;; session. Security delta vs 2 is small; privacy is unaffected. (To
+            ;; restore the strictest mode set "2" and toggle to 1 only when gaming.)
+            ("kernel.yama.ptrace_scope"         . "1")
             ("kernel.unprivileged_bpf_disabled" . "1")
             ("net.core.bpf_jit_harden"          . "2")
             ("net.ipv4.tcp_congestion_control"  . "bbr")
