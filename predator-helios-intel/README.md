@@ -46,8 +46,43 @@
 └────────────────────────────────────────────────────────────────┘
 ```
 
-Files in this folder: [`config.scm`](./config.scm) · [`home.scm`](./home.scm) · [`securityops.defconfig`](./securityops.defconfig) · `README.md`.
+Files in this folder: [`config.scm`](./config.scm) · [`config-sway.scm`](./config-sway.scm) · [`config-xlibre.scm`](./config-xlibre.scm) · [`home.scm`](./home.scm) · [`securityops.defconfig`](./securityops.defconfig) · `README.md`.
 Shared channels live at the repo root in [`../channels.scm`](../channels.scm).
+
+<br>
+
+## 🖥️ Sway (Wayland) vs XLibre (X11) — benefits & differences
+
+Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram, swapfile and NVIDIA graft. They differ **only** in the display layer — but that layer has real security and ergonomics consequences, so each variant is tuned for a different priority.
+
+| | **`config-sway.scm`** — Sway / Wayland | **`config-xlibre.scm`** — XLibre / X11 |
+|---|---|---|
+| **Display server** | Sway (wlroots compositor) | XLibre X server 25.1.7 (X.Org fork) |
+| **Login manager** | greetd (agreety **text** greeter on vt7) | SLiM (graphical X greeter on vt7) |
+| **Window manager** | Sway (built-in tiling) | xmonad (+ xmobar) |
+| **Seat / DRM master** | `elogind` + libseat (no `seatd`) | X server owns the device |
+| **NVIDIA** | `--unsupported-gpu` + `nvidia_drm.modeset=1` + software cursor | native `nvidia` DDX, `ForceFullCompositionPipeline` |
+| **Keymap** | `~/.config/sway/config` (`br/abnt2`) — Wayland ignores the OS layout | OS `(keyboard-layout)` drives X directly |
+| **Screenshots** | `grim` + `slurp` | `scrot` / `flameshot` |
+| **Per-monitor scaling / hotplug** | native (`wlr-randr`, `kanshi`, `wdisplays`) | `xrandr` / `autorandr` |
+| **Brightness/gamma** | `brightnessctl` (Wayland has no `xrandr` gamma) | two-stage `brightness-step` (backlight + xrandr gamma) |
+| **`/tmp`** | **16 GiB, `nosuid,nodev,noexec`** (hardened, see below) | 4 GiB `nosuid,nodev` |
+| **`ptrace_scope`** | **`2` (hardened)** — RDR2 needs a runtime toggle | `1` (relaxed so RDR2/Arxan runs out of the box) |
+
+### Why Sway is the **more secure** variant 🔐
+
+- **Client isolation (the big one).** Under X11 *any* client can read every other window's keystrokes and pixels (global input + `XGetImage`) — a single compromised app can keylog your password manager or screen-scrape your banking tab. Wayland isolates clients: an app sees only its **own** surface and input. For a box handling sensitive data this is a categorical hardening that X11 cannot offer.
+- **Smaller privileged surface.** No big, monolithic, historically-CVE-heavy X server brokering all input/output; wlroots is far smaller and runs unprivileged via libseat/elogind. The greeter is a minimal **text** prompt, so there is no compositor running at the login stage.
+- **Hardened ephemeral scratch.** `/tmp` is a 16 GiB RAM tmpfs with `noexec` (no running dropped payloads), `nosuid`, `nodev`; it is wiped on every reboot and any spill goes to the **LUKS2-encrypted** swapfile (and hibernation is off), so sensitive scratch never hits disk in plaintext.
+- **Strongest `ptrace` default.** `kernel.yama.ptrace_scope=2`. To play RDR2 (its Arxan anti-tamper needs `PTRACE_TRACEME`), lower it at **runtime** — no reconfigure, auto-reverts on reboot: `sudo sysctl kernel.yama.ptrace_scope=1`.
+
+### When to pick XLibre instead
+
+- You want the **xmonad** tiling workflow (xmobar, EZConfig keybinds, decades of muscle memory).
+- You need rock-solid **NVIDIA X11** (no `--unsupported-gpu` caveats), `xrandr` gamma brightness, or X-only screen-share/record tooling.
+- An app has no Wayland backend and XWayland isn't enough.
+
+> Switch with `~/promote-sway-config.sh` (Sway) or reconfigure from `config-xlibre.scm`; both are one `guix system roll-back` away from each other.
 
 <br>
 

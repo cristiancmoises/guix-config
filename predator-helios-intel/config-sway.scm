@@ -134,6 +134,16 @@
  (gnu packages tor)
  (gnu packages vpn)
  (small-guix packages mullvad)
+
+ ;; securityops channel — latest-version overrides for the curated apps:
+ ;;   kitty 0.47.4 (gnu 0.46.2), tor 0.4.9.9 (gnu 0.4.9.8),
+ ;;   mullvad-vpn-desktop 2026.3 (small-guix 2025.8).  Prefixed `so:' so the
+ ;;   bare gnu/small-guix bindings stay available; only the so:… symbols below
+ ;;   are switched to the channel.
+ ((securityops packages terminals) #:prefix so:)   ; so:kitty
+ ((securityops packages tor)       #:prefix so:)   ; so:tor
+ ((securityops packages vpn)       #:prefix so:)   ; so:mullvad-vpn-desktop
+ ((securityops packages browsers)  #:prefix so:)   ; so:librewolf 152.0.1-2 (gnu 151.0.4-1)
  (gnu packages curl)
  (gnu packages ssh)
  (gnu packages antivirus)
@@ -357,6 +367,19 @@
   (keyboard-layout %kbd)
   (host-name "securityops")        ; installer named it "matrix"
 
+  ;; ── Swap ──
+  ;; 24 GiB disk swapfile on the (ext4) encrypted root, layered over the 8 GiB
+  ;; zram below.  Needed to build Firefox-class packages from source
+  ;; (librewolf/torbrowser/icecat): their rust LTO crate `gkrust' is a single
+  ;; ~14 GiB rustc that OOM-kills a bare 15 GiB box at ANY -j.  guix activates
+  ;; (swapon) this at boot, but does NOT create the file — create it once:
+  ;;   sudo fallocate -l 24G /var/swapfile && sudo chmod 600 /var/swapfile \
+  ;;     && sudo mkswap /var/swapfile && sudo swapon /var/swapfile
+  ;; NOTE: the swapfile lives on the LUKS2-encrypted root, so any /tmp pages that
+  ;; spill here (incl. sensitive data) are encrypted at rest — no plaintext leak.
+  (swap-devices
+   (list (swap-space (target "/var/swapfile"))))
+
   ;; ── Users ──
   (users
    (cons*
@@ -384,7 +407,7 @@
     (list openresolv)
 
     ;; Browsers & apps
-    (list librewolf
+    (list librewolf               ; TEMP revert (was so:librewolf) until daemon builds on /var/tmp
           icecat
           steam-nvidia)          ; NVIDIA-aware Steam FHS container (nonguix)
 
@@ -475,7 +498,7 @@
           strace
           edk2-tools
           alacritty
-          kitty
+          so:kitty               ; securityops channel: 0.47.4 (gnu 0.46.2) — Go deps packaged
           foot
           fish
           bat
@@ -496,7 +519,7 @@
           libfido2
           firejail
           openvpn
-          tor
+          so:tor                 ; securityops channel: 0.4.9.9 (gnu 0.4.9.8)
           torsocks
           nmap
           wireshark
@@ -596,9 +619,12 @@
         (handle-lid-switch 'ignore)
         (handle-lid-switch-external-power 'ignore)
         (handle-lid-switch-docked 'ignore)))
-      ;; NetworkManager manages /etc/resolv.conf so Mullvad can set DNS through
-      ;; it (Mullvad's Linux DNS path goes via NM). Put the NextDNS servers on
-      ;; your NM connection (see notes) so DNS = NextDNS whenever the VPN is off.
+      ;; NetworkManager manages /etc/resolv.conf when the VPN is OFF (put your
+      ;; NextDNS servers on the NM connection so DNS = NextDNS then). When Mullvad
+      ;; is UP it writes /etc/resolv.conf DIRECTLY via its talpid_dns static backend
+      ;; (NOT through NM) as 0600 root-only — see the 'resolv-conf-watch /
+      ;; 'resolv-conf-readable services below, which keep it 0644 for the Steam
+      ;; container.
       (network-manager-service-type config =>
        (network-manager-configuration
         (inherit config)
@@ -612,6 +638,11 @@
          (append
           '(("kernel.kptr_restrict"             . "2")
             ("kernel.dmesg_restrict"            . "1")
+            ;; Hardened ptrace_scope=2 (capability-only) — the secure default for
+            ;; this Sway variant. NOTE: RDR2's Arxan anti-tamper self-debugs via
+            ;; PTRACE_TRACEME and clean-exits at scope 2; to play it, lower at
+            ;; RUNTIME (no reconfigure, auto-reverts on reboot):
+            ;;   sudo sysctl kernel.yama.ptrace_scope=1
             ("kernel.yama.ptrace_scope"         . "2")
             ("kernel.unprivileged_bpf_disabled" . "1")
             ("net.core.bpf_jit_harden"          . "2")
@@ -627,7 +658,11 @@
             ;; off swap read-ahead clustering (zram is random-access; page-cluster
             ;; 0 = 1 page per fault, lower latency). Pairs with the zram service.
             ("vm.swappiness"                      . "180")
-            ("vm.page-cluster"                    . "0"))
+            ("vm.page-cluster"                    . "0")
+            ;; RDR2/DXVK (and other big Vulkan games) need a high mmap count;
+            ;; Proton normally raises this itself but can't inside the no-CAP
+            ;; nonguix Steam container. 65530 (default) -> world-load crash.
+            ("vm.max_map_count"                   . "1048576"))
           (sysctl-configuration-settings config)))))
       ;; Build daemon: send build scratch to /var/tmp (on the encrypted root disk),
       ;; NOT the new RAM-backed tmpfs /tmp. Large LOCAL builds (the custom
@@ -733,15 +768,76 @@
               (stop #~(make-kill-destructor))
               (auto-start? #f))))
 
-     ;; Tighten /home and /var/lib/aide perms at boot.
+     ;; Tighten /home perms at boot AND make /etc/resolv.conf world-readable.
+     ;; resolv.conf is written 0600 root-only by the Mullvad daemon (talpid_dns
+     ;; static backend), which breaks DNS for any non-root process that can't reach
+     ;; nscd — notably Steam inside its nonguix FHS container (nscd isn't shared
+     ;; there; sharing it breaks RDR2 audio). Without a readable resolv.conf, glibc
+     ;; in the container finds no nameserver and every Steam CM connect fails
+     ;; instantly ("neterror - Invalid"), leaving Steam stuck OFFLINE. 0644 is the
+     ;; universal default and exposes only which DNS server is used — no secrets,
+     ;; no effect on the VPN tunnel/kill-switch.
+     ;; NOTE: this service MUST set an explicit PATH — shepherd's pid1 has an EMPTY
+     ;; PATH, so the previous bare-"chmod" form silently failed (it left /home
+     ;; 0755, never 0751). /var/lib/aide is dropped (it doesn't exist). The
+     ;; 'resolv-conf-watch (inotify, instant) and 'resolv-conf-readable (mcron,
+     ;; per-minute) services below are the steady-state guarantees; this one only
+     ;; covers the boot instant.
      (simple-service 'file-permissions shepherd-root-service-type
        (list (shepherd-service
               (provision '(file-permissions))
               (start #~(make-forkexec-constructor
-                        '("/bin/sh" "-c"
-                          "chmod 751 /home && chmod 750 /var/lib/aide")))
+                        (list "/run/current-system/profile/bin/sh" "-c"
+                              "chmod 751 /home 2>/dev/null || true; chmod 0644 /etc/resolv.conf 2>/dev/null || true")
+                        #:environment-variables
+                        (list "PATH=/run/current-system/profile/bin")))
               (stop #~(make-kill-destructor))
               (auto-start? #t))))
+
+     ;; Keep /etc/resolv.conf world-readable so Steam (and anything else in the
+     ;; nonguix FHS container, which has no nscd) can resolve DNS. Mullvad/NM
+     ;; rewrite it 0600 on every (re)connect; re-chmod it at the top of each
+     ;; minute. See the 'file-permissions service above for the full rationale.
+     (simple-service 'resolv-conf-readable mcron-service-type
+       (list #~(job '(next-minute)
+                    "chmod 0644 /etc/resolv.conf 2>/dev/null || true")))
+
+     ;; Zero-window guarantee: watch the /etc DIRECTORY with inotify and re-chmod
+     ;; /etc/resolv.conf to 0644 the instant it is (re)written, closing the up-to-
+     ;; 60s gap the mcron backstop leaves after each Mullvad reconnect. Notes, each
+     ;; verified on this system: (1) watch the DIR, not the file — Mullvad/openresolv
+     ;; REPLACE the inode, which would kill a single-file watch; (2) inotify-tools
+     ;; 3.22.6.0 here has NO --exec, so events are piped into a Guile read-loop;
+     ;; (3) we deliberately do NOT watch 'attrib' — chmod itself emits IN_ATTRIB,
+     ;; which would self-trigger an infinite chmod loop. Mode bits only: no effect
+     ;; on DNS content, the VPN tunnel, or the kill-switch.
+     (simple-service 'resolv-conf-watch shepherd-root-service-type
+       (list (shepherd-service
+              (documentation "Instantly chmod 0644 /etc/resolv.conf on every (re)write.")
+              (provision '(resolv-conf-watch))
+              (requirement '(networking))
+              (respawn? #t)
+              (start
+               #~(make-forkexec-constructor
+                  (list #$(program-file "resolv-conf-watcher"
+                           #~(begin
+                               (use-modules (ice-9 popen) (ice-9 rdelim))
+                               (let ((inotifywait #$(file-append inotify-tools "/bin/inotifywait"))
+                                     (chmod-bin    #$(file-append coreutils "/bin/chmod")))
+                                 (system* chmod-bin "0644" "/etc/resolv.conf")
+                                 (let ((port (open-pipe* OPEN_READ inotifywait
+                                                         "-m" "-q"
+                                                         "-e" "close_write"
+                                                         "-e" "create"
+                                                         "-e" "moved_to"
+                                                         "--include" "resolv\\.conf$"
+                                                         "--format" "%f" "/etc")))
+                                   (let loop ((line (read-line port)))
+                                     (unless (eof-object? line)
+                                       (when (string=? line "resolv.conf")
+                                         (system* chmod-bin "0644" "/etc/resolv.conf"))
+                                       (loop (read-line port)))))))))))
+              (stop #~(make-kill-destructor)))))
 
      ;; Bluetooth.
      (service bluetooth-service-type
@@ -837,8 +933,12 @@ table inet filter {
          ("QT_QUICK_CONTROLS_STYLE" . "Fusion")
          ("QT_ENABLE_HIGHDPI_SCALING" . "0")))
 
-     ;; Mullvad VPN daemon
-     (service mullvad-daemon-service-type)
+     ;; Mullvad VPN daemon — pointed at the securityops channel package
+     ;; (2026.3 stable) so the running daemon matches the curated channel set
+     ;; instead of small-guix's older 2025.8 default.
+     (service mullvad-daemon-service-type
+              (mullvad-daemon-configuration
+               (mullvad-vpn-desktop so:mullvad-vpn-desktop)))
 
      ;; Containers.
      (service docker-service-type)
@@ -931,21 +1031,32 @@ DisableDebuggerAttachment 1
             (type "ext4")
             (flags '(no-atime))
             (dependencies mapped-devices))
-          ;; --- ADDED: RAM-backed /tmp for fast scratch -------------------------
-          ;; tmpfs in RAM (spills to zram under pressure). size=4G is a CAP, not a
-          ;; reservation — empty /tmp uses ~0 RAM. Capped at 4G (not 8G) so /tmp +
-          ;; /dev/shm (~7.6G cap) cannot jointly exhaust 15 GiB RAM under a loaded
-          ;; game; a runaway /tmp writer hits ENOSPC before the OOM-killer. nosuid+
-          ;; nodev harden it; exec left ON so build scripts/installers from /tmp
-          ;; still work. Big guix builds are redirected off /tmp via the daemon
-          ;; tmpdir above; for an occasional huge client build use TMPDIR=/var/tmp.
+          ;; --- Secure, RAM-backed /tmp (16 GiB, hardened for sensitive data) ---
+          ;; tmpfs in RAM; size=16G is a CAP, not a reservation — an empty /tmp
+          ;; uses ~0 RAM and only what you actually write is held. Files larger
+          ;; than free RAM spill into the 24 GiB swapfile, which lives on the
+          ;; LUKS2-encrypted root, so sensitive scratch is encrypted at rest —
+          ;; no plaintext leak to disk. HIBERNATION is off too, so RAM is never
+          ;; imaged out. tmpfs is wiped completely on every reboot, so nothing is
+          ;; persisted ("files i don't need to store"). Hardening flags:
+          ;;   no-suid — setuid bits in /tmp are ignored (no privilege escalation)
+          ;;   no-dev  — device nodes in /tmp are ignored
+          ;;   no-exec — code in /tmp CANNOT be executed: blocks malware/dropped
+          ;;             payloads run straight from a download dir. guix builds
+          ;;             already use /var/tmp (daemon tmpdir above), so this does
+          ;;             NOT affect package builds; to run an installer/AppImage,
+          ;;             run it from /var/tmp or $HOME instead.
+          ;; The 16G cap (not all RAM) means a runaway writer hits ENOSPC, never
+          ;; the OOM-killer. mode=1777 keeps standard sticky world-writable perms;
+          ;; create sensitive files with a tight umask (umask 077) so other local
+          ;; users can't read them.
           (file-system
             (device "tmpfs")
             (mount-point "/tmp")
             (type "tmpfs")
             (check? #f)
-            (flags '(no-suid no-dev))
-            (options "mode=1777,size=4G")
+            (flags '(no-suid no-dev no-exec))
+            (options "mode=1777,size=16G")
             (create-mount-point? #t))
           %base-file-systems))))
 
