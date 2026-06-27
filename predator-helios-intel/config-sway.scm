@@ -330,9 +330,19 @@
     ;; commit fails → "wl render errors"). Driver 580 supports atomic KMS
     ;; (nvidia_drm.modeset=1 + fbdev=1 are set), so let wlroots use it.
     ;;
-    ;; Force LINEAR (no-modifier) GBM buffers — the canonical NVIDIA fix so the
-    ;; renderer's buffer formats agree with the KMS scanout plane.
-    ("WLR_DRM_NO_MODIFIERS" . "1")
+    ;; WLR_DRM_NO_MODIFIERS was REMOVED — it was the actual cause of the black
+    ;; panel. It forced wlroots' GBM allocator to call gbm_bo_create() with NO
+    ;; modifier list, so every scan-out buffer came out with modifier INVALID
+    ;; (implicit). NVIDIA's 580 display engine does NOT scan out implicit/INVALID-
+    ;; modifier buffers: drmModeAddFB2 returned EINVAL -> "Failed to import BO in
+    ;; KMS" -> "connector eDP-1: Failed to import buffer for scan-out", so eDP-1
+    ;; stayed black while sway, the GLES2 renderer and swaybg all ran fine. With
+    ;; this UNSET, wlroots negotiates an EXPLICIT format modifier (the EGL reports
+    ;; "DMA-BUF format modifiers supported") between the renderer/allocator and the
+    ;; KMS plane's IN_FORMATS — which NVIDIA accepts. (The "linear is the canonical
+    ;; NVIDIA fix" lore predates 515+ GBM and is WRONG for 580 — verified live: the
+    ;; buffers were INVALID-modifier and AddFB2 EINVAL'd on explicit, implicit AND
+    ;; legacy paths.)
     ;; Pin the DRM master to the NVIDIA primary node (single GPU → card0).
     ("WLR_DRM_DEVICES"      . "/dev/dri/card0")
     ;; Safety net — now actually REACHABLE (see the unset-WLR_RENDERER note above):
