@@ -91,16 +91,16 @@ Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram 
 | **Display server** | Sway (wlroots compositor) | XLibre X server 25.1.7 (X.Org fork) |
 | **Login manager** | greetd (agreety **text** greeter) | SLiM (graphical X greeter) |
 | **Window manager** | Sway (built-in tiling) | xmonad (+ xmobar) |
-| **NVIDIA** | `--unsupported-gpu` + `nvidia_drm.modeset=1` + software cursor | native `nvidia` DDX, `ForceFullCompositionPipeline` |
+| **NVIDIA** | `--unsupported-gpu` + `seatd` seat + hand-wired NVIDIA EGL/GBM vendor + software cursor | native `nvidia` DDX, `ForceFullCompositionPipeline` |
 | **`/tmp`** | **16 GiB, `nosuid,nodev,noexec`** (hardened) | 4 GiB `nosuid,nodev` |
-| **`ptrace_scope`** | **`2` (hardened)** — RDR2 needs a runtime toggle | `1` (relaxed so RDR2/Arxan runs out of the box) |
+| **`ptrace_scope`** | `1` (yama relational) — **baked** for Steam/RDR2/GTA, no runtime toggle | `1` (same) |
 | **Security posture** | **more secure** (client isolation, smaller surface) | more compatible (X11 tooling, no GPU caveats) |
 
 ### Why the Sway variant is more secure 🔐
 
 - **Client isolation (the big one).** Under X11 *any* client can read every other window's keystrokes and pixels (global input + `XGetImage`) — one compromised app can keylog your password manager or screen-scrape a banking tab. Wayland isolates clients so an app sees only its **own** surface and input.
-- **Smaller privileged surface.** No monolithic, historically-CVE-heavy X server brokering all I/O; wlroots is far smaller and runs unprivileged via libseat/elogind, and the greeter is a minimal **text** prompt (no compositor at the login stage).
-- **Hardened ephemeral scratch + strongest `ptrace`.** `/tmp` is a 16 GiB `noexec` RAM tmpfs wiped each reboot with spill going to the **LUKS2-encrypted** swapfile (no plaintext leak), and `kernel.yama.ptrace_scope=2` by default (lower it at runtime only when a game's anti-tamper needs it).
+- **Smaller privileged surface.** No monolithic, historically-CVE-heavy X server brokering all I/O; wlroots is far smaller and runs unprivileged via libseat + the **`seatd`** daemon, and the greeter is a minimal **text** prompt (no compositor at the login stage).
+- **Hardened ephemeral scratch.** `/tmp` is a 16 GiB `noexec` RAM tmpfs wiped each reboot with spill going to the **LUKS2-encrypted** swapfile (no plaintext leak). (`ptrace_scope` is `1` — yama *relational* — on **both** variants, baked so Steam/RDR2/GTA run with no runtime toggle, so it is *not* where Sway's edge comes from; that's the client isolation + smaller surface above.)
 
 <br>
 

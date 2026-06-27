@@ -27,7 +27,7 @@
 > | [`config-xlibre.scm`](config-xlibre.scm) | XLibre 25.1.7 (X11) | SLiM | xmonad |
 > | [`config-sway.scm`](config-sway.scm) | **Sway / wlroots (Wayland)** | **greetd** (agreety text greeter) | **Sway** |
 >
-> `config.scm` is the **active** file and currently mirrors **`config-sway.scm`**. Because the laptop is MUX'd to the discrete NVIDIA RTX 4060 (no iGPU fallback), Sway is launched with `--unsupported-gpu` + an NVIDIA-Wayland env; `elogind` handles the seat (no `seatd`). The per-user `~/.config/sway/config` sets the `br/abnt2` keymap (Wayland ignores the OS `keyboard-layout`).
+> `config.scm` is the **active** file and currently mirrors **`config-sway.scm`**. Because the laptop is MUX'd to the discrete NVIDIA RTX 4060 (no iGPU fallback), Sway is launched with `--unsupported-gpu` + an NVIDIA-Wayland env. The **`seatd` daemon** owns the seat (`LIBSEAT_BACKEND=seatd`); a `user-runtime-dir` service + a small launcher wrapper guarantee `XDG_RUNTIME_DIR` exists (and tee `sway -d` to a **user-readable** `~/sway-greetd.log`, so a failed login is diagnosable without root); and glvnd is pointed at the **NVIDIA EGL vendor** so the wlroots GLES2 renderer initialises on the proprietary blob. The per-user `~/.config/sway/config` sets the `br/abnt2` keymap (Wayland ignores the OS `keyboard-layout`).
 >
 > **Apply Sway:** `sudo bash ~/promote-sway-config.sh` (backs up `/etc/config.scm` → `.xlibre.bak-*`, installs the Sway config), then from a **physical TTY** `sudo guix system reconfigure --fallback /etc/config.scm`.
 > **Revert to XLibre:** `sudo guix system roll-back` / pick the prior generation in GRUB, or reconfigure from `config-xlibre.scm`.
@@ -60,21 +60,21 @@ Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram,
 | **Display server** | Sway (wlroots compositor) | XLibre X server 25.1.7 (X.Org fork) |
 | **Login manager** | greetd (agreety **text** greeter on vt7) | SLiM (graphical X greeter on vt7) |
 | **Window manager** | Sway (built-in tiling) | xmonad (+ xmobar) |
-| **Seat / DRM master** | `elogind` + libseat (no `seatd`) | X server owns the device |
-| **NVIDIA** | `--unsupported-gpu` + `nvidia_drm.modeset=1` + software cursor | native `nvidia` DDX, `ForceFullCompositionPipeline` |
+| **Seat / DRM master** | **`seatd`** daemon + libseat (`LIBSEAT_BACKEND=seatd`) | X server owns the device |
+| **NVIDIA** | `--unsupported-gpu` + GBM (`nvidia-drm`) + NVIDIA EGL vendor (glvnd) + software cursor + linear buffers | native `nvidia` DDX, `ForceFullCompositionPipeline` |
 | **Keymap** | `~/.config/sway/config` (`br/abnt2`) — Wayland ignores the OS layout | OS `(keyboard-layout)` drives X directly |
 | **Screenshots** | `grim` + `slurp` | `scrot` / `flameshot` |
 | **Per-monitor scaling / hotplug** | native (`wlr-randr`, `kanshi`, `wdisplays`) | `xrandr` / `autorandr` |
 | **Brightness/gamma** | `brightnessctl` (Wayland has no `xrandr` gamma) | two-stage `brightness-step` (backlight + xrandr gamma) |
 | **`/tmp`** | **16 GiB, `nosuid,nodev,noexec`** (hardened, see below) | 4 GiB `nosuid,nodev` |
-| **`ptrace_scope`** | **`2` (hardened)** — RDR2 needs a runtime toggle | `1` (relaxed so RDR2/Arxan runs out of the box) |
+| **`ptrace_scope`** | `1` (yama *relational*) — **baked** so Steam/RDR2/GTA run with no runtime toggle | `1` (same) |
 
 ### Why Sway is the **more secure** variant 🔐
 
 - **Client isolation (the big one).** Under X11 *any* client can read every other window's keystrokes and pixels (global input + `XGetImage`) — a single compromised app can keylog your password manager or screen-scrape your banking tab. Wayland isolates clients: an app sees only its **own** surface and input. For a box handling sensitive data this is a categorical hardening that X11 cannot offer.
-- **Smaller privileged surface.** No big, monolithic, historically-CVE-heavy X server brokering all input/output; wlroots is far smaller and runs unprivileged via libseat/elogind. The greeter is a minimal **text** prompt, so there is no compositor running at the login stage.
+- **Smaller privileged surface.** No big, monolithic, historically-CVE-heavy X server brokering all input/output; wlroots is far smaller and runs unprivileged via libseat + the **`seatd`** daemon. The greeter is a minimal **text** prompt, so there is no compositor running at the login stage.
 - **Hardened ephemeral scratch.** `/tmp` is a 16 GiB RAM tmpfs with `noexec` (no running dropped payloads), `nosuid`, `nodev`; it is wiped on every reboot and any spill goes to the **LUKS2-encrypted** swapfile (and hibernation is off), so sensitive scratch never hits disk in plaintext.
-- **Strongest `ptrace` default.** `kernel.yama.ptrace_scope=2`. To play RDR2 (its Arxan anti-tamper needs `PTRACE_TRACEME`), lower it at **runtime** — no reconfigure, auto-reverts on reboot: `sudo sysctl kernel.yama.ptrace_scope=1`.
+- **`ptrace` is yama-restricted on *both* variants** (`kernel.yama.ptrace_scope=1`): an unrelated process still cannot attach to another, so the cross-process snooping yama defends against is blocked — but a game's anti-tamper (Arxan's `PTRACE_TRACEME` on its **own** children) works with **no runtime toggle and no reconfigure**. The stricter `2` was dropped on purpose so Steam/RDR2/GTA run out of the box; it is *not* where Sway's security edge comes from — that is the three points above (client isolation, smaller surface, hardened scratch).
 
 ### When to pick XLibre instead
 
@@ -109,6 +109,12 @@ This is the headline change versus the old AMD/Mesa box: a proprietary NVIDIA st
 - **Session GL/EGL/VAAPI env.** `gpu-env-service` exports the NVIDIA GLX/GBM stack (`__GLX_VENDOR_LIBRARY_NAME=nvidia`, `GBM_BACKEND=nvidia-drm`, `LIBGL_DRI3_ENABLE=1`) and pins Firefox/Qt/GTK to X11/EGL.
 - **nouveau blacklisted.** `modprobe.blacklist=nouveau,…` on the cmdline keeps the open driver from binding the 4060 (the defconfig mirrors this with `# CONFIG_DRM_NOUVEAU is not set`).
 - **Guix Home graft too.** `home.scm` wraps its whole package list in `(replace-mesa … #:driver nvda-580)` because the OS transformation only covers the *system* profile — this also grafts `ffmpeg → ffmpeg/nvidia` (NVENC/NVDEC for mpv/obs/vlc) and `steam → steam-nvidia`.
+- **Sway-on-NVIDIA bring-up (Wayland).** Driving wlroots on the proprietary blob needs more than the graft — the greetd → Sway session layers it on in order:
+  1. the **`seatd`** daemon owns the seat (`LIBSEAT_BACKEND=seatd`; the elogind seat path fails under greetd here);
+  2. a `user-runtime-dir` service + a launcher wrapper guarantee **`XDG_RUNTIME_DIR=/run/user/1000`** exists *before* Sway starts (greetd sets the variable but not the directory) and tee `sway -d` to a **user-readable `~/sway-greetd.log`**, so a failed login is diagnosable without root;
+  3. **EGL/GBM discovery is wired up by hand**, because Guix ships none of the FHS default dirs (`/usr/share/glvnd`, `/etc/egl`, …) the NVIDIA stack hard-codes — three vars, each the missing piece for one layer: the **EGL vendor ICD** (`__EGL_VENDOR_LIBRARY_FILENAMES` → `10_nvidia` json; without it glvnd finds zero vendors → empty extension list → "Failed to create EGL context"), the **GBM EGL external-platform** (`__EGL_EXTERNAL_PLATFORM_CONFIG_DIRS` → `libnvidia-egl-gbm`; without it `EGL_KHR_platform_gbm` is absent → `eglGetPlatformDisplay(GBM)` returns no display), and the **GBM backend** (`GBM_BACKENDS_PATH` → `nvidia-drm_gbm.so`; sway's `libgbm` is mesa's and ships only `dri_gbm.so` by default);
+  4. `GBM_BACKEND=nvidia-drm`, a **software cursor** (`WLR_NO_HARDWARE_CURSORS=1`, the HW cursor plane is broken on the blob), and **linear / no-modifier** scanout buffers (`WLR_DRM_NO_MODIFIERS=1`) on `card0` with atomic KMS (driver 580 supports it; `nvidia_drm.modeset=1` + `fbdev=1`);
+  5. the renderer is left **unpinned** (no `WLR_RENDERER=gles2`) so wlroots tries hardware GLES2 first but can fall back to the **pixman software renderer** (`WLR_RENDERER_ALLOW_SOFTWARE=1`) into a usable, debuggable desktop instead of a greetd login-loop. *(The three EGL/GBM vars above were each verified load-bearing with a live `gbm + eglInitialize + eglCreateContext(GLES2)` probe — drop any one and context creation fails.)*
 
 <br>
 
