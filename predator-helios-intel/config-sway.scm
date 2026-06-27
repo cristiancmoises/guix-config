@@ -320,6 +320,33 @@
     ("WLR_RENDERER_ALLOW_SOFTWARE" . "1")))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
+;;; Sway launcher — what greetd execs (instead of raw `sway`). It (1) guarantees
+;;; XDG_RUNTIME_DIR exists (greetd sets the VAR to /run/user/<uid> but does not
+;;; create the DIR — pam_mount is meant to, and the 'user-runtime-dir service
+;;; below also creates it), and (2) tees Sway's debug output to a USER-READABLE
+;;; ~/sway-greetd.log so any future failure is diagnosable WITHOUT root.
+;;; ──────────────────────────────────────────────────────────────────────────
+(define %sway-launch
+  (program-file
+   "sway-launch"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules (guix build utils))
+         (let* ((uid  (number->string (getuid)))
+                (xdg  (string-append "/run/user/" uid))
+                (home (or (getenv "HOME") "/home/berkeley"))
+                (logf (string-append home "/sway-greetd.log")))
+           (unless (file-exists? xdg)
+             (catch #t (lambda () (mkdir-p xdg) (chmod xdg #o700)) (lambda _ #t)))
+           (setenv "XDG_RUNTIME_DIR" xdg)
+           ;; tee stdout+stderr to a user-readable log for diagnosis
+           (let ((p (open-file logf "w")))
+             (dup2 (fileno p) 1)
+             (dup2 (fileno p) 2))
+           (execl #$(file-append sway "/bin/sway")
+                  "sway" "--unsupported-gpu" "-d"))))))
+
+;;; ──────────────────────────────────────────────────────────────────────────
 ;;; Operating system
 ;;; ──────────────────────────────────────────────────────────────────────────
 (define %securityops-os
@@ -767,6 +794,24 @@
                         #:log-file "/var/log/seatd.log"))
               (stop #~(make-kill-destructor)))))
 
+     ;; Guarantee /run/user/1000 exists before the graphical login. greetd sets
+     ;; XDG_RUNTIME_DIR=/run/user/1000 but does NOT create the dir (it relies on
+     ;; pam_mount/pam_elogind); if that doesn't run, Sway can't make its Wayland
+     ;; socket and dies before the renderer. This makes it certain (0700, berkeley
+     ;; uid=1000 gid=998). The %sway-launch wrapper also points XDG_RUNTIME_DIR here.
+     (simple-service 'user-runtime-dir shepherd-root-service-type
+       (list (shepherd-service
+              (documentation "Ensure /run/user/1000 exists for the greetd→Sway session.")
+              (provision '(user-runtime-dir))
+              (requirement '(user-processes))
+              (start #~(make-forkexec-constructor
+                        (list "/run/current-system/profile/bin/sh" "-c"
+                              "mkdir -p /run/user/1000; chown 1000:998 /run/user/1000; chmod 700 /run/user/1000")
+                        #:environment-variables
+                        (list "PATH=/run/current-system/profile/bin")))
+              (stop #~(make-kill-destructor))
+              (auto-start? #t))))
+
      (service greetd-service-type
        (greetd-configuration
         ;; video+input let a *graphical* greeter (if you later switch to
@@ -781,8 +826,10 @@
              (greetd-agreety-session
               (command
                (greetd-user-session
-                (command (file-append sway "/bin/sway"))
-                (command-args '("--unsupported-gpu"))
+                ;; %sway-launch wraps sway: ensures XDG_RUNTIME_DIR and tees Sway's
+                ;; output to the user-readable ~/sway-greetd.log, then execs
+                ;; `sway --unsupported-gpu -d`.
+                (command %sway-launch)
                 (xdg-session-type "wayland")
                 (extra-env %sway-session-env))))))))))
 
