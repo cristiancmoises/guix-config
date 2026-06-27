@@ -441,6 +441,17 @@ EndSection
   (keyboard-layout %kbd)
   (host-name "securityops")        ; installer named it "matrix"
 
+  ;; ── Swap ──
+  ;; 24 GiB disk swapfile on the (ext4) encrypted root, layered over the 8 GiB
+  ;; zram below.  Needed to build Firefox-class packages from source
+  ;; (librewolf/torbrowser/icecat): their rust LTO crate `gkrust' is a single
+  ;; ~14 GiB rustc that OOM-kills a bare 15 GiB box at ANY -j.  guix activates
+  ;; (swapon) this at boot, but does NOT create the file — create it once:
+  ;;   sudo fallocate -l 24G /var/swapfile && sudo chmod 600 /var/swapfile \
+  ;;     && sudo mkswap /var/swapfile && sudo swapon /var/swapfile
+  (swap-devices
+   (list (swap-space (target "/var/swapfile"))))
+
   ;; ── Users ──
   (users
    (cons*
@@ -672,9 +683,12 @@ EndSection
         (handle-lid-switch 'ignore)
         (handle-lid-switch-external-power 'ignore)
         (handle-lid-switch-docked 'ignore)))
-      ;; NetworkManager manages /etc/resolv.conf so Mullvad can set DNS through
-      ;; it (Mullvad's Linux DNS path goes via NM). Put the NextDNS servers on
-      ;; your NM connection (see notes) so DNS = NextDNS whenever the VPN is off.
+      ;; NetworkManager manages /etc/resolv.conf when the VPN is OFF (put your
+      ;; NextDNS servers on the NM connection so DNS = NextDNS then). When Mullvad
+      ;; is UP it writes /etc/resolv.conf DIRECTLY via its talpid_dns static backend
+      ;; (NOT through NM) as 0600 root-only — see the 'resolv-conf-watch /
+      ;; 'resolv-conf-readable services below, which keep it 0644 for the Steam
+      ;; container.
       (network-manager-service-type config =>
        (network-manager-configuration
         (inherit config)
@@ -799,22 +813,29 @@ EndSection
               (stop #~(make-kill-destructor))
               (auto-start? #f))))
 
-     ;; Tighten /home and /var/lib/aide perms at boot. Also make /etc/resolv.conf
-     ;; world-readable: NetworkManager/Mullvad write it 0600 root-only, which
-     ;; breaks DNS for any non-root process that can't reach nscd — notably Steam
-     ;; inside its nonguix FHS container (nscd isn't shared there; sharing it
-     ;; breaks RDR2 audio). Without a readable resolv.conf, glibc in the container
-     ;; finds no nameserver and every Steam CM connect fails instantly
-     ;; ("neterror - Invalid"), leaving Steam stuck OFFLINE. 0644 is the universal
-     ;; default and exposes only which DNS server is used — no secrets, no effect
-     ;; on the VPN tunnel/kill-switch. (mcron 'resolv-conf-readable below
-     ;; re-applies this every minute so it survives Mullvad reconnects.)
+     ;; Tighten /home perms at boot AND make /etc/resolv.conf world-readable.
+     ;; resolv.conf is written 0600 root-only by the Mullvad daemon (talpid_dns
+     ;; static backend), which breaks DNS for any non-root process that can't reach
+     ;; nscd — notably Steam inside its nonguix FHS container (nscd isn't shared
+     ;; there; sharing it breaks RDR2 audio). Without a readable resolv.conf, glibc
+     ;; in the container finds no nameserver and every Steam CM connect fails
+     ;; instantly ("neterror - Invalid"), leaving Steam stuck OFFLINE. 0644 is the
+     ;; universal default and exposes only which DNS server is used — no secrets,
+     ;; no effect on the VPN tunnel/kill-switch.
+     ;; NOTE: this service MUST set an explicit PATH — shepherd's pid1 has an EMPTY
+     ;; PATH, so the previous bare-"chmod" form silently failed (it left /home
+     ;; 0755, never 0751). /var/lib/aide is dropped (it doesn't exist). The
+     ;; 'resolv-conf-watch (inotify, instant) and 'resolv-conf-readable (mcron,
+     ;; per-minute) services below are the steady-state guarantees; this one only
+     ;; covers the boot instant.
      (simple-service 'file-permissions shepherd-root-service-type
        (list (shepherd-service
               (provision '(file-permissions))
               (start #~(make-forkexec-constructor
-                        '("/bin/sh" "-c"
-                          "chmod 751 /home && chmod 750 /var/lib/aide; chmod 0644 /etc/resolv.conf 2>/dev/null || true")))
+                        (list "/run/current-system/profile/bin/sh" "-c"
+                              "chmod 751 /home 2>/dev/null || true; chmod 0644 /etc/resolv.conf 2>/dev/null || true")
+                        #:environment-variables
+                        (list "PATH=/run/current-system/profile/bin")))
               (stop #~(make-kill-destructor))
               (auto-start? #t))))
 
@@ -825,6 +846,43 @@ EndSection
      (simple-service 'resolv-conf-readable mcron-service-type
        (list #~(job '(next-minute)
                     "chmod 0644 /etc/resolv.conf 2>/dev/null || true")))
+
+     ;; Zero-window guarantee: watch the /etc DIRECTORY with inotify and re-chmod
+     ;; /etc/resolv.conf to 0644 the instant it is (re)written, closing the up-to-
+     ;; 60s gap the mcron backstop leaves after each Mullvad reconnect. Notes, each
+     ;; verified on this system: (1) watch the DIR, not the file — Mullvad/openresolv
+     ;; REPLACE the inode, which would kill a single-file watch; (2) inotify-tools
+     ;; 3.22.6.0 here has NO --exec, so events are piped into a Guile read-loop;
+     ;; (3) we deliberately do NOT watch 'attrib' — chmod itself emits IN_ATTRIB,
+     ;; which would self-trigger an infinite chmod loop. Mode bits only: no effect
+     ;; on DNS content, the VPN tunnel, or the kill-switch.
+     (simple-service 'resolv-conf-watch shepherd-root-service-type
+       (list (shepherd-service
+              (documentation "Instantly chmod 0644 /etc/resolv.conf on every (re)write.")
+              (provision '(resolv-conf-watch))
+              (requirement '(networking))
+              (respawn? #t)
+              (start
+               #~(make-forkexec-constructor
+                  (list #$(program-file "resolv-conf-watcher"
+                           #~(begin
+                               (use-modules (ice-9 popen) (ice-9 rdelim))
+                               (let ((inotifywait #$(file-append inotify-tools "/bin/inotifywait"))
+                                     (chmod-bin    #$(file-append coreutils "/bin/chmod")))
+                                 (system* chmod-bin "0644" "/etc/resolv.conf")
+                                 (let ((port (open-pipe* OPEN_READ inotifywait
+                                                         "-m" "-q"
+                                                         "-e" "close_write"
+                                                         "-e" "create"
+                                                         "-e" "moved_to"
+                                                         "--include" "resolv\\.conf$"
+                                                         "--format" "%f" "/etc")))
+                                   (let loop ((line (read-line port)))
+                                     (unless (eof-object? line)
+                                       (when (string=? line "resolv.conf")
+                                         (system* chmod-bin "0644" "/etc/resolv.conf"))
+                                       (loop (read-line port)))))))))))
+              (stop #~(make-kill-destructor)))))
 
      ;; Bluetooth.
      (service bluetooth-service-type

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Settings>
+  <version value="34" />
+  <configSource>SMC_AUTO</configSource>
+  <graphics>
+    <Tessellation value="2" />
+    <LodScale value="0.000000" />
+    <PedLodBias value="0.200000" />
+    <VehicleLodBias value="0.150000" />
+    <ShadowQuality value="2" />
+    <ReflectionQuality value="2" />
+    <SSAOType value="2" />
+    <AnisotropicFiltering value="4" />
+    <ResScalingType value="0" />
+    <FrameGenType value="0" />
+    <SamplingMode value="0" />
+    <TextureQuality value="2" />
+    <ParticleQuality value="2" />
+    <WaterQuality value="2" />
+    <GrassQuality value="2" />
+    <ShaderQuality value="2" />
+    <Shadow_SoftShadows value="2" />
+    <UltraShadows_Enabled value="false" />
+    <Shadow_ParticleShadows value="true" />
+    <Shadow_Distance value="1.000000" />
+    <Shadow_LongShadows value="false" />
+    <Shadow_SplitZStart value="0.930000" />
+    <Shadow_SplitZEnd value="0.890000" />
+    <Shadow_aircraftExpWeight value="0.990000" />
+    <Shadow_DisableScreenSizeCheck value="false" />
+    <Reflection_MipBlur value="true" />
+    <AAType value="2" />
+    <TAA_Quality value="1" />
+    <TAA_SharpenIntensity value="1.000000" />
+    <fsrQuality value="2" />
+    <fsrSharpen value="0.200000" />
+    <fsr3Quality value="2" />
+    <fsr3Sharpen value="0.800000" />
+    <fsr3FrameGenMode value="0" />
+    <dlssQuality value="2" />
+    <dlssSharpen value="0.800000" />
+    <dlssFrameGenMode value="0" />
+    <Lighting_FogVolumes value="false" />
+    <Shader_SSA value="true" />
+    <CityDensity value="0.900000" />
+    <PedVarietyMultiplier value="0.900000" />
+    <VehicleVarietyMultiplier value="0.900000" />
+    <VehicleHeadlightDistanceMultiplier value="1.000000" />
+    <PostFX value="2" />
+    <DoF value="1" />
+    <HdStreamingInFlight value="true" />
+    <MaxLodScale value="0.000000" />
+    <MotionBlurStrength value="1.000000" />
+    <VehicleDamageCacheSize value="80" />
+    <VehicleDamageTextureSize value="128" />
+    <PedOverlayTextureSize value="512" />
+    <PedOverlayCloseUpTextureSize value="1024" />
+    <HDTextureSwapsPerFrame value="100" />
+    <LensFlare_HalfRes value="false" />
+    <LensArtefacts_HalfRes value="false" />
+    <Raytracing_Enabled value="false" />
+    <Raytracing_StaticBvhEnabled value="true" />
+    <Raytracing_StaticBvhRadius value="256.000000" />
+    <Raytracing_StaticBvhAngularThreshold value="0.750000" />
+    <Raytracing_DynamicBvhEnabled value="true" />
+    <Raytracing_DynamicBvhRadius value="64.000000" />
+    <Raytracing_DynamicBvhAngularThreshold value="1.500000" />
+    <Raytracing_HDVehicleBvhRadius value="32.000000" />
+    <Raytracing_VehicleBvhRadius value="256.000000" />
+    <Raytracing_TreeBvhEnabled value="true" />
+    <Raytracing_TreeBvhRadius value="256.000000" />
+    <Raytracing_TreeBvhAngularThreshold value="1.000000" />
+    <Raytracing_TreeBvhAnimRadius value="64.000000" />
+    <Raytracing_TreeBvhAnimScThreshold value="0.030000" />
+    <Raytracing_TreeBvhAxisScThreshold value="0.200000" />
+    <Raytracing_GrassBvhEnabled value="false" />
+    <Raytracing_GrassBvhRadius value="96.000000" />
+    <Raytracing_GrassBvhAngularThreshold value="3.000000" />
+    <Raytracing_GrassBvhDensity value="1.750000" />
+    <DeferredReflectionsEnabled value="true" />
+    <DeferredCubeReflectionsEnabled value="true" />
+    <DeferredWaterReflectionsEnabled value="true" />
+    <DeferredMirrorReflectionsEnabled value="true" />
+    <DeferredCubeReflectionsComputeEnabled value="true" />
+    <DeferredWaterReflectionsComputeEnabled value="true" />
+    <DeferredMirrorReflectionsComputeEnabled value="true" />
+    <RTShadows_Enabled value="false" />
+    <RTShadows_Quality value="0" />
+    <RTAmbientOcclusion_Enabled value="false" />
+    <RTAmbientOcclusion_Quality value="0" />
+    <RTReflection_Enabled value="false" />
+    <RTReflection_Quality value="0" />
+    <RTIndirectDiffuse_Enabled value="false" />
+    <RTIndirectDiffuse_Quality value="0" />
+    <RTCharacterShadow_Enabled value="false" />
+    <RTApplyAOToFillLights value="false" />
+    <RTIndirectDiffuse_SecondBounce_Enabled value="false" />
+    <RTReflection_FullRes_Enabled value="false" />
+    <PlayerHeadlightShadowsQuality value="0" />
+    <NetPlayerHeadlightsCastShadows value="false" />
+    <AllVehicleHeadlightShadowsQuality value="0" />
+  </graphics>
+  <system>
+    <numBytesPerReplayBlock value="9000000" />
+    <numReplayBlocks value="36" />
+    <maxSizeOfStreamingReplay value="1024" />
+    <maxFileStoreSize value="65536" />
+    <forceSingleStepPhysics value="false" />
+  </system>
+  <audio>
+    <Audio3d value="false" />
+  </audio>
+  <video>
+    <AdapterIndex value="0" />
+    <OutputIndex value="0" />
+    <ScreenWidth value="1920" />
+    <ScreenHeight value="1200" />
+    <RefreshRate value="60" />
+    <Windowed value="3" />
+    <VSync value="1" />
+    <PauseOnFocusLoss value="1" />
+    <AspectRatio value="0" />
+    <ReflexMode value="0" />
+    <FrameLimit value="0" />
+  </video>
+  <VideoCardDescription>NVIDIA GeForce RTX 4060 Laptop GPU</VideoCardDescription>
+  <VideoDriverDescription>580.99</VideoDriverDescription>
+  <MinimumVideoDriverDescription>580.82</MinimumVideoDriverDescription>
+  <CPUDescription>13th Gen Intel(R) Core(TM) i7-13700HX</CPUDescription>
+  <Presets>
+    <PresetLevel value="2" />
+    <BVHQuality value="0" />
+    <RTShadowQuality value="0" />
+    <RTReflectionQuality value="0" />
+    <RTDynamicQuality value="0" />
+    <RTStaticQuality value="0" />
+    <RTVehicleQuality value="0" />
+    <RTTreeQuality value="0" />
+    <RTGrassQuality value="0" />
+    <RTAOQuality value="0" />
+    <RTGIQuality value="0" />
+    <LightingQuality value="0" />
+    <PostFXQuality value="2" />
+    <ReflectionQuality value="2" />
+  </Presets>
+</Settings>
