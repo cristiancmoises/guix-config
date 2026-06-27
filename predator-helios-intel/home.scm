@@ -48,6 +48,7 @@
  (gnu packages haskell-xyz)
  (gnu packages xml)
  (gnu packages video)
+ (gnu packages chromium)
  (gnu packages telegram)
  (gnu packages librewolf)
  (gnu packages games)
@@ -58,6 +59,7 @@
  (gnu packages maths)
  (gnu home services gnupg)
  (gnu home services xdg)
+ (gnu home services shepherd)
  (gnu packages commencement)
  (gnu packages vulkan)
  (gnu packages glib)
@@ -105,6 +107,11 @@
  (gnu packages ebook)
  (gnu packages emacs)
  (gnu packages emacs-xyz)
+ ;; --- added 2026-06-14: modules for Emacs LSP servers / linters / spell ---
+ (gnu packages python-check)      ; python-pyflakes, python-bandit
+ (gnu packages golang-apps)       ; gopls
+ (gnu packages node-xyz)          ; node-typescript
+ (gnu packages aspell)            ; aspell + en dictionary
  (gnu packages freedesktop)
  (gnu packages build-tools)
  (gnu packages gl)
@@ -159,7 +166,18 @@
  ;(longdong packages binaries)
  (gnu services dbus)
  (gnu packages fcitx5)
- (gnu home services sound))
+ (gnu home services sound)
+
+ ;; securityops channel — latest-version overrides for the curated apps:
+ ;;   kitty 0.47.4 (gnu 0.46.2), tor 0.4.9.9 (gnu 0.4.9.8),
+ ;;   torbrowser 15.0.16 (gnu 15.0.14), google-chrome-stable 149 (nongnu 148),
+ ;;   ungoogled-chromium-bin 149.0.7827.155 (prebuilt; source-build unavailable over Tor).
+ ;; Imported behind the `so:' prefix so the bare gnu/nongnu bindings stay
+ ;; available; only the symbols switched to so:… below use the channel.
+ ((securityops packages terminals) #:prefix so:)   ; so:kitty
+ ((securityops packages tor)       #:prefix so:)   ; so:tor, so:torbrowser
+ ((securityops packages browsers)  #:prefix so:)   ; so:google-chrome-stable, so:ungoogled-chromium-bin
+ ((securityops packages apps)      #:prefix so:))  ; so:moneyprinterturbo
 
 (home-environment
 
@@ -283,6 +301,7 @@
          qtwebengine
          qtshadertools
          vlc
+         so:moneyprinterturbo   ; securityops channel: MoneyPrinterTurbo 1.3.0 (venv-bootstrap over Tor)
          steam-nvidia
          wine
          winetricks
@@ -329,8 +348,8 @@
    ;; Dual-monitor: autorandr (auto-apply layout on hotplug) + arandr (GUI).
    (list fcitx5
          fcitx5-qt
-         librewolf
-         torbrowser
+         librewolf              ; TEMP revert (was so:librewolf) until daemon builds on /var/tmp
+         so:torbrowser          ; securityops channel: 15.0.16 thin-LTO source build (gnu 15.0.14)
          desktop-file-utils
          qemu
          gnome-tweaks
@@ -396,7 +415,7 @@
          hashcat
          keepassxc
          nftables
-         tor
+         so:tor                 ; securityops channel: 0.4.9.9 (gnu 0.4.9.8)
          tor-client
          torsocks
          openvpn
@@ -510,17 +529,36 @@
          emacs-emojify
          emacs-company-emoji)
 
+   ;; ── Emacs LSP servers / linters / spell-check (added 2026-06-14) ──
+   ;; Back the lsp-mode / flycheck / apheleia / flyspell setup in
+   ;; ~/.emacs.d/init.el. All verified present via `guix package -A`.
+   ;; NOT packaged in Guix — install separately if you want them:
+   ;;   typescript-language-server :  npm i -g typescript-language-server typescript
+   ;;   semgrep                    :  pipx install semgrep
+   ;;   trivy                      :  download the static binary release
+   (list python-lsp-server          ; pylsp — Python LSP
+         python-pyflakes            ; pylsp linting
+         python-pycodestyle         ; pylsp style checks
+         python-bandit              ; bandit — Python SAST (also in C-c k menu)
+         gopls                      ; Go LSP
+         shellcheck                 ; shell linting via flycheck
+         node-typescript            ; tsc / tsserver
+         ripgrep                    ; rg — consult-ripgrep / projectile
+         fd                         ; fd — fast file finder
+         aspell                     ; spell-checker (flyspell)
+         aspell-dict-en)            ; English dictionary
+
    ;; ── Optional / extras ──
    (list opendoas
-         google-chrome-stable
-         librewolf
+         so:ungoogled-chromium-bin ; securityops channel: PREBUILT 149.0.7827.155 (gnu source-build 147, unbuildable over Tor)
+         so:google-chrome-stable ; securityops channel: 149 (nongnu 148)
+         librewolf              ; TEMP revert (was so:librewolf) until daemon builds on /var/tmp
          telegram-desktop
          wezterm
          alacritty
-         kitty
+         so:kitty               ; securityops channel: 0.47.4 (gnu 0.46.2) — Go deps packaged
          flameshot
          qimgv
-         geeqie
          ueberzugpp
          xdg-desktop-portal
          xdg-desktop-portal-gtk))
@@ -556,7 +594,16 @@ if xrandr --query | grep -q \"^$EXTERNAL connected\"; then
 else
     xrandr --output \"$INTERNAL\" --auto --primary
 fi
-"))))
+"))
+              ;; Screen-brightness two-stage dimmer (repo: dotfiles/brightness-step):
+              ;; hardware backlight, then xrandr software gamma below the hardware
+              ;; floor for much darker low-end dimming, with cross-session persistence.
+              ;; Bound to XF86MonBrightnessUp/Down in ~/.xmonad/xmonad.hs; the
+              ;; `restore` subcommand runs from the xmonad startupHook on login.
+              (".local/bin/brightness-step"
+               ,(local-file
+                 "/home/berkeley/guix-config/predator-helios-intel/dotfiles/brightness-step"
+                 #:recursive? #t))))
 
    ;; ── Bash (fallback shell) ──
    (service home-bash-service-type
@@ -626,7 +673,7 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
                 ("wall" . "cp /home/berkeley/Downloads/wall.jpg /tmp && bg /tmp/wall.jpg")
                 ("help" . "del /tmp/*jpg /tmp/*webp /tmp/*png /tmp/*mp4 /tmp/*gif /tmp/*jpeg && rm -rf ad*")
                 ("now" . "cd /tmp && tar -czf - * | openssl enc -e -aes256 -out secured.tar.gz && mv secured.tar.gz /files")
-                ("bb" . "bg ~/downloads/preto.jpg")
+                ("bb" . "feh --bg-fill ~/wallpapers/preto.png")
                 ("xx" . "bg /var/cache/wallpaper.png")
                 ("hot" . "cp ~/secured.tar.gz /tmp && cd /tmp && openssl enc -d -aes256 -in secured.tar.gz | tar xz")
                 ("big" . "find /home/berkeley -type f -size +1000M > /home/berkeley/big.txt")
@@ -670,6 +717,55 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
                 ("nsxiv.desktop" . ("image/avif" "image/bmp" "image/jpeg" "image/png" "image/svg+xml" "image/webp"))
                 ("foliate.desktop" . ("application/epub+zip"))
                 ("sioyek.desktop" . ("application/pdf"))))))
+
+   ;; ── WhatsApp.el 3.0.0 stack (Shepherd user services) ──
+   ;; Two services replace the former Node/Baileys bridge: `wuzapi' (the
+   ;; Go/whatsmeow WhatsApp engine, loopback :8080) and `whatsappel-bridge' (the
+   ;; Guile bridge whatsappel.scm, loopback :7337) which talks to it. The bridge
+   ;; `requires' wuzapi, so wuzapi starts first. Both respawn on failure. Secrets
+   ;; are read at runtime from ~/wuzapi/.env and ~/whatsappel/.env (mode 600) —
+   ;; never embedded in the world-readable store. The wuzapi session lives under
+   ;; ~/.config/whatsappel/wuzapi-data, so the phone link survives restarts.
+   (simple-service 'whatsappel-stack-service
+                   home-shepherd-service-type
+                   (list
+                    ;; wuzapi — the WhatsApp multi-device engine (whatsmeow).
+                    (shepherd-service
+                     (provision '(wuzapi))
+                     (documentation "wuzapi WhatsApp engine (whatsmeow), loopback :8080.")
+                     (respawn? #t)
+                     (start
+                      #~(make-forkexec-constructor
+                         (list (string-append (getenv "HOME") "/wuzapi/wuzapi")
+                               "-datadir"
+                               (string-append (getenv "HOME")
+                                              "/.config/whatsappel/wuzapi-data")
+                               "-logtype" "console")
+                         #:directory (string-append (getenv "HOME") "/wuzapi")
+                         #:log-file (string-append (getenv "HOME")
+                                                   "/.config/whatsappel/logs/wuzapi.log")
+                         #:environment-variables (environ)))
+                     (stop #~(make-kill-destructor)))
+                    ;; whatsappel bridge — Emacs-facing Guile bridge.
+                    (shepherd-service
+                     (provision '(whatsappel-bridge))
+                     (requirement '(wuzapi))
+                     (documentation "whatsappel Guile bridge (Emacs <-> wuzapi), loopback :7337.")
+                     (respawn? #t)
+                     (start
+                      #~(make-forkexec-constructor
+                         (list #$(file-append bash "/bin/bash") "-c"
+                               (string-append
+                                "export PATH=\"$HOME/.local/bin:"
+                                "/run/current-system/profile/bin:"
+                                "$HOME/.guix-home/profile/bin:$PATH\"; "
+                                "set -a; . \"$HOME/whatsappel/.env\"; set +a; "
+                                "exec guile \"$HOME/whatsappel/whatsappel.scm\""))
+                         #:directory (string-append (getenv "HOME") "/whatsappel")
+                         #:log-file (string-append (getenv "HOME")
+                                                   "/.config/whatsappel/logs/bridge.log")
+                         #:environment-variables (environ)))
+                     (stop #~(make-kill-destructor)))))
 
    ;; ── Environment variables (AMD DRI_PRIME removed; NVIDIA shader cache added) ──
    (simple-service 'environment-variables-service

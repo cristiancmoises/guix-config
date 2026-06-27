@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Two-stage screen dimmer with fine low-end control + cross-session persistence.
+# Acer Predator Helios (NVIDIA RTX 4060, panel exposed as DP-4; backlight nvidia_0).
+#
+# Deployed to ~/.local/bin/brightness-step by home.scm (home-files-service-type).
+# Bound to XF86MonBrightnessUp/Down in ~/.xmonad/xmonad.hs; `restore` runs from the
+# xmonad startupHook to re-apply the last level after login.
+#
+#   Stage 1 (normal):   hardware backlight (nvidia_0) 100..1 via brightnessctl/elogind
+#                       - multiplicative ~20% steps up high (few presses)
+#                       - every single level reachable at the bottom (<= LINEAR_MAX)
+#   Stage 2 (very dim): once backlight is at its minimum, keep going via xrandr
+#                       software gamma on the panel, 1.00 .. SW_MIN (much darker)
+#
+# "up" undoes stage 2 first (restore gamma to 1.0), then raises the backlight.
+# Usage: brightness-step up|down|restore
+set -u
+export DISPLAY=:0 XAUTHORITY=/home/berkeley/.Xauthority LC_ALL=C
+
+PANEL=DP-4                                   # internal eDP panel (nvidia naming)
+BL=/sys/class/backlight/nvidia_0
+BCTL=/home/berkeley/.guix-home/profile/bin/brightnessctl
+XR=/home/berkeley/.guix-home/profile/bin/xrandr
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/brightness-step"
+
+LINEAR_MAX=10     # backlight levels <= this step by exactly 1 (fine low end)
+BL_MIN=1          # backlight never goes fully off
+SW_MIN=10         # software-gamma floor, percent (0.10 = very dark)
+SW_STEP=5         # software-gamma step, percent
+
+read_sw() { "$XR" --verbose 2>/dev/null \
+  | awk -v p="$PANEL" '$1==p{f=1} f&&/Brightness/{printf "%d",$2*100+0.5; exit}'; }
+apply_sw() { "$XR" --output "$PANEL" --brightness \
+  "$(awk -v v="$1" 'BEGIN{printf "%.2f", v/100}')"; }
+save() { mkdir -p "$(dirname "$STATE")"; printf '%s %s\n' "$1" "$2" >"$STATE"; }
+
+blmax=$(< "$BL/max_brightness")
+bl=$(< "$BL/brightness")
+sw=$(read_sw); [ -z "$sw" ] && sw=100
+
+case "${1:-}" in
+  down)
+    if (( bl > BL_MIN )); then
+      if (( bl <= LINEAR_MAX )); then new=$(( bl - 1 ))
+      else new=$(( bl * 4 / 5 )); (( new < LINEAR_MAX )) && new=$LINEAR_MAX; fi
+      (( new < BL_MIN )) && new=$BL_MIN
+      "$BCTL" -q set "$new"; bl=$new
+    else
+      nsw=$(( sw - SW_STEP )); (( nsw < SW_MIN )) && nsw=$SW_MIN
+      apply_sw "$nsw"; sw=$nsw
+    fi ;;
+  up)
+    if (( sw < 100 )); then
+      nsw=$(( sw + SW_STEP )); (( nsw > 100 )) && nsw=100
+      apply_sw "$nsw"; sw=$nsw
+    else
+      if (( bl < LINEAR_MAX )); then new=$(( bl + 1 ))
+      else new=$(( bl * 5 / 4 )); (( new <= bl )) && new=$(( bl + 1 )); fi
+      (( new > blmax )) && new=$blmax
+      "$BCTL" -q set "$new"; bl=$new
+    fi ;;
+  restore)
+    [ -r "$STATE" ] || exit 0
+    read -r rbl rsw _ <"$STATE" || exit 0
+    case "$rbl" in ''|*[!0-9]*) rbl=$blmax ;; esac
+    case "$rsw" in ''|*[!0-9]*) rsw=100 ;; esac
+    (( rbl < BL_MIN )) && rbl=$BL_MIN; (( rbl > blmax )) && rbl=$blmax
+    (( rsw < SW_MIN )) && rsw=$SW_MIN; (( rsw > 100 )) && rsw=100
+    "$BCTL" -q set "$rbl"; apply_sw "$rsw"
+    exit 0 ;;
+  *)
+    echo "usage: ${0##*/} up|down|restore" >&2; exit 1 ;;
+esac
+
+save "$bl" "$sw"
