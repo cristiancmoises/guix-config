@@ -371,6 +371,16 @@
            (unless (file-exists? xdg)
              (catch #t (lambda () (mkdir-p xdg) (chmod xdg #o700)) (lambda _ #t)))
            (setenv "XDG_RUNTIME_DIR" xdg)
+           ;; Put the SYSTEM profile on PATH for the whole Sway session. greetd
+           ;; does NOT source the user's home profile, so without this the system
+           ;; packages declared in this file (mullvad-vpn, lynis, nft, killall, …)
+           ;; live in /run/current-system/profile/bin but are invisible to rofi
+           ;; (`$mod+d`) and to terminals opened inside Sway -> "command not found".
+           ;; Prepend so they resolve; the Home profile (already on PATH) wins ties.
+           (setenv "PATH"
+                   (string-append "/run/current-system/profile/bin:"
+                                  "/run/current-system/profile/sbin:"
+                                  (or (getenv "PATH") "")))
            ;; tee stdout+stderr to a user-readable log for diagnosis
            (let ((p (open-file logf "w")))
              (dup2 (fileno p) 1)

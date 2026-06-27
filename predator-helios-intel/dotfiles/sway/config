@@ -61,7 +61,7 @@ exec swayidle -w \
     before-sleep 'swaylock -f -c 000000'
 
 ### Autostart ###############################################################
-exec waybar          # status bar — config in ~/.config/waybar/{config.jsonc,style.css}
+# exec waybar        # top status bar — DISABLED per user request (no top bar)
 exec mako
 # Input method (fcitx5 for Japanese IME — env vars are set by config.scm's
 # jp-ime-env service). Uncomment if fcitx5 is installed in your profile/home:
