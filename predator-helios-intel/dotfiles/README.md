@@ -113,3 +113,19 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 - **Not in Sway at all?** Check `echo $XDG_SESSION_TYPE` / `pgrep sway`. If you're
   still in the XLibre/xmonad X11 session, the Sway binds don't apply — log into
   the greetd → Sway session first.
+
+### Modkey — Super/WIN (Mod4) and the Acer Windows-key lock
+
+Both variants use **`Mod4` = the Super/WIN key** (`modMask = mod4Mask` in xmonad,
+`set $mod Mod4` in Sway). If WIN "does nothing" as the modkey while only ALT
+works, the X mapping is almost certainly fine (`xmodmap -pm` shows `Super_L`/
+`Super_R` on `mod4`) — the cause is usually one of:
+
+- **The Acer Windows-key lock (most common).** On the Predator the WIN key
+  doubles as a **lock** (a key with a lock + Windows icon) so you don't hit it
+  mid-game. **When locked it emits no event at all**, so `Mod4` never fires.
+  Toggle it off on the keyboard (the lock/Windows key, often with `Fn`) — then
+  `Mod4` works with zero config changes.
+- **fcitx5 was grabbing `Super+space`.** Its `EnumerateGroupForward/Backward`
+  hotkeys were `Super+space` / `Shift+Super+space`; cleared in
+  [`fcitx5/config`](./fcitx5/config) so the WM owns Super. Apply: `fcitx5 -r &`.
