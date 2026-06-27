@@ -408,8 +408,9 @@
 
   ;; plugdev is referenced above but is NOT in %base-groups; define it.
   (groups
-   (cons (user-group (name "plugdev") (system? #t))
-         %base-groups))
+   (cons* (user-group (name "plugdev") (system? #t))
+          (user-group (name "seat") (system? #t))   ; seatd device-access group (Sway/wlroots)
+          %base-groups))
 
   ;;; ────────────────────────────────────────────────────────────────────────
   ;;; Packages
@@ -705,10 +706,23 @@
      ;; seatd: wlroots/Sway takes its seat (DRM master + input) from seatd, NOT
      ;; logind. Confirmed via `sway -d`: without this Sway dies instantly with
      ;; "libseat: No backend was able to open a seat" + "logind: Only owner of
-     ;; session may take control". seatd-service-type runs the daemon (creates
-     ;; /run/seatd.sock) and the "seat" group (berkeley is a member, above);
-     ;; %sway-session-env sets LIBSEAT_BACKEND=seatd. elogind stays for power/logind.
-     (service seatd-service-type)
+     ;; session may take control". We run the seatd daemon DIRECTLY (not
+     ;; seatd-service-type — that one also mounts /sys/fs/cgroup and provides
+     ;; 'elogind, both of which collide with the elogind in %desktop-services that
+     ;; we keep for sessions/power/lid). seatd creates /run/seatd.sock owned by the
+     ;; "seat" group (defined above; berkeley is a member); %sway-session-env sets
+     ;; LIBSEAT_BACKEND=seatd. cgroup is already mounted by elogind at boot.
+     (simple-service 'seatd shepherd-root-service-type
+       (list (shepherd-service
+              (documentation "seatd seat-management daemon for wlroots/Sway.")
+              (provision '(seatd))
+              (requirement '(user-processes))
+              (respawn? #t)
+              (start #~(make-forkexec-constructor
+                        (list #$(file-append seatd "/bin/seatd") "-g" "seat")
+                        #:environment-variables '("SEATD_LOGLEVEL=info")
+                        #:log-file "/var/log/seatd.log"))
+              (stop #~(make-kill-destructor)))))
 
      (service greetd-service-type
        (greetd-configuration
