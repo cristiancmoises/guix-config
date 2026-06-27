@@ -280,13 +280,34 @@
     ;; logind/elogind seat path fails under greetd here ("Only owner of session
     ;; may take control"), so force seatd — the reliable wlroots backend on Guix.
     ("LIBSEAT_BACKEND"         . "seatd")
-    ;; GLES2 is the most compatible wlroots renderer on the NVIDIA blob.
-    ("WLR_RENDERER"            . "gles2")
+    ;; Renderer is deliberately LEFT UNSET. Pinning WLR_RENDERER=gles2 bypasses
+    ;; wlroots' renderer_autocreate, which DISABLES the pixman software fallback
+    ;; gated by WLR_RENDERER_ALLOW_SOFTWARE (below) — that is exactly why a render
+    ;; failure hard-dropped to a greetd login-loop instead of a usable desktop.
+    ;; Unset, wlroots still tries hardware GLES2 FIRST, then falls back to pixman.
     ;; Belt-and-suspenders with the --unsupported-gpu command-line flag.
     ("SWAY_UNSUPPORTED_GPU"    . "true")
     ;; GBM/GLX vendor (also set globally; repeated so the session is self-contained).
     ("GBM_BACKEND"               . "nvidia-drm")
     ("__GLX_VENDOR_LIBRARY_NAME" . "nvidia")
+    ;; ── EGL/GBM vendor DISCOVERY (the missing piece that kept Sway off the GPU) ──
+    ;; sway's libEGL is libglvnd's dispatch lib, and the NVIDIA GBM/GL stack hard-
+    ;; codes FHS default dirs (/usr/share/glvnd, /etc|/usr/share/egl, mesa's gbm
+    ;; backend dir) that DO NOT EXIST on Guix — so each layer must be pointed at the
+    ;; system profile by hand. All three were verified load-bearing with a live
+    ;; `gbm + eglInitialize + eglCreateContext(GLES2)` probe on this box; drop any
+    ;; one and the wlroots renderer fails (empty EGL extension list / EGL_NO_DISPLAY
+    ;; / "MESA-LOADER: failed to open nvidia-drm").
+    ;;   1. EGL vendor ICD — else glvnd loads 0 vendors -> "Failed to create EGL context".
+    ("__EGL_VENDOR_LIBRARY_FILENAMES"
+     . "/run/current-system/profile/share/glvnd/egl_vendor.d/10_nvidia.x86_64.json")
+    ;;   2. GBM EGL external-platform (libnvidia-egl-gbm) — else EGL_KHR_platform_gbm
+    ;;      is absent and eglGetPlatformDisplay(GBM) returns EGL_NO_DISPLAY.
+    ("__EGL_EXTERNAL_PLATFORM_CONFIG_DIRS"
+     . "/run/current-system/profile/share/egl/egl_external_platform.d")
+    ;;   3. GBM backend search path — sway's libgbm is mesa's (only dri_gbm.so on the
+    ;;      default path); point it at nvidia-drm_gbm.so so GBM_BACKEND=nvidia-drm resolves.
+    ("GBM_BACKENDS_PATH" . "/run/current-system/profile/lib/gbm")
     ;; Desktop identity for xdg-desktop-portal / app theming.
     ("XDG_CURRENT_DESKTOP" . "sway")
     ("XDG_SESSION_DESKTOP" . "sway")
@@ -314,9 +335,10 @@
     ("WLR_DRM_NO_MODIFIERS" . "1")
     ;; Pin the DRM master to the NVIDIA primary node (single GPU → card0).
     ("WLR_DRM_DEVICES"      . "/dev/dri/card0")
-    ;; Safety net: if GPU renderer init STILL fails, fall back to the pixman
-    ;; software renderer (slow) so you get a usable desktop instead of a black
-    ;; screen / greetd login-loop. Remove once the GPU renderer is confirmed.
+    ;; Safety net — now actually REACHABLE (see the unset-WLR_RENDERER note above):
+    ;; if hardware GLES2 init still fails, wlroots falls back to the pixman software
+    ;; renderer (slow) so you land in a usable, debuggable desktop instead of a black
+    ;; screen / greetd login-loop. Remove once the GPU renderer is confirmed solid.
     ("WLR_RENDERER_ALLOW_SOFTWARE" . "1")))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
