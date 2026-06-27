@@ -129,3 +129,13 @@ works, the X mapping is almost certainly fine (`xmodmap -pm` shows `Super_L`/
 - **fcitx5 was grabbing `Super+space`.** Its `EnumerateGroupForward/Backward`
   hotkeys were `Super+space` / `Shift+Super+space`; cleared in
   [`fcitx5/config`](./fcitx5/config) so the WM owns Super. Apply: `fcitx5 -r &`.
+
+### xmonad stops working after a VT switch
+
+`Ctrl+Alt+Fn` to another VT and back leaves modifier keys "stuck" (the key
+*release* is delivered to the other VT, so X on `:0` still thinks Ctrl/Alt are
+held) and can drop xmonad's key grabs — so keybinds stop matching. Since the
+modkey itself can't be used to recover, run [`fix-xmonad`](./fix-xmonad) from any
+terminal: it releases stuck modifiers (via `xdotool`, now in `home.scm`) and
+re-grabs everything (`xmonad --restart`). Quick manual fix without it: tap
+`Ctrl`, then `Alt`, once each.

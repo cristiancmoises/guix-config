@@ -1,0 +1,17 @@
+#!/bin/sh
+# fix-xmonad — recover xmonad after a VT switch.
+# Switching VTs with Ctrl+Alt+Fn delivers the modifier *release* to the other
+# VT, so X on :0 thinks Ctrl/Alt are still held (keybinds stop matching) and/or
+# the keyboard grabs get dropped. Run this from ANY terminal (no modkey needed):
+#   fix-xmonad
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
+# 1) release any stuck modifiers (needs xdotool; harmless if absent)
+if command -v xdotool >/dev/null 2>&1; then
+  xdotool keyup ctrl alt shift super meta Super_L Super_R Alt_L Alt_R Control_L Control_R 2>/dev/null
+  echo "stuck modifiers released"
+else
+  echo "xdotool not installed — run 'guix home reconfigure' after the home.scm update; meanwhile tap Ctrl then Alt to clear stuck keys"
+fi
+# 2) re-grab all keybindings
+xmonad --restart && echo "xmonad re-grabbed (restarted)"

@@ -399,6 +399,7 @@
          xprop
          xrandr
          xset
+         xdotool                 ; clear stuck modifiers after a VT switch (fix-xmonad)
          xterm
          xkeyboard-config
          st
