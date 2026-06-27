@@ -1063,11 +1063,12 @@ DisableDebuggerAttachment 1
             (mount-point "/tmp")
             (type "tmpfs")
             (check? #f)
-            ;; noexec dropped for the Sway first boot — matches the known-good
-            ;; XLibre /tmp (a well-known session-breaker variable). 16G cap kept;
-            ;; re-add no-exec once Sway is confirmed booting.
+            ;; Match the known-good XLibre /tmp EXACTLY (4G, no noexec) to rule the
+            ;; tmpfs out as the boot/partition failure — this makes config-sway's
+            ;; file-systems identical to the booting XLibre config. Restore
+            ;; size=16G (+ no-exec) once Sway is confirmed booting.
             (flags '(no-suid no-dev))
-            (options "mode=1777,size=16G")
+            (options "mode=1777,size=4G")
             (create-mount-point? #t))
           %base-file-systems))))
 
