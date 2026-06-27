@@ -34,7 +34,7 @@ main = xmonad
   `additionalKeysP` keyBinds
 
 myConfig = def
-  { modMask = mod1Mask
+  { modMask = mod4Mask           -- Super / WIN key (default modkey)
   , layoutHook = windowArrange myLayout
   , terminal = "wezterm"
   , focusedBorderColor = "#000000"

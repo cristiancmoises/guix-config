@@ -8,9 +8,8 @@
 # here is a per-user dotfile; the system config (config.scm) is unaffected.
 
 ### Variables ###############################################################
-# $mod = ALT (Mod1). Switched from Mod4/Super because the WIN key stopped
-# registering as Mod4 — all the WIN+… binds below are now ALT+…
-set $mod  Mod1
+# $mod = Super / WIN key (Mod4) — the default modkey. All the WIN+… binds below.
+set $mod  Mod4
 set $term foot
 # App launcher: rofi (installed via guix-home; runs under XWayland — same
 # launcher as the xmonad variant). WIN+d = run dialog (see keybinds below).
