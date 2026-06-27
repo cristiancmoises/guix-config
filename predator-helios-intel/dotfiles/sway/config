@@ -10,8 +10,10 @@
 ### Variables ###############################################################
 set $mod  Mod4
 set $term foot
-# App launcher (fuzzel is installed; wmenu-run is sway's built-in default):
-set $menu fuzzel
+# App launcher: rofi (installed via guix-home; runs under XWayland — same
+# launcher as the xmonad variant). WIN+d = run dialog (see keybinds below).
+# NOTE: fuzzel/wmenu are NOT installed here; using them made WIN+d a no-op.
+set $menu rofi -show run
 # Directional keys, vim-style + arrows:
 set $left  h
 set $down  j
@@ -78,8 +80,10 @@ bindsym $mod+a       exec /home/berkeley/.guix-home/profile/bin/wezterm
 bindsym $mod+o       exec /home/berkeley/.guix-home/profile/bin/wezterm -e /scripts/batata.sh
 bindsym $mod+r       exec /home/berkeley/.guix-home/profile/bin/wezterm -e /usr/bin/turborecorder
 
-# Launcher  (xmonad M-d = rofi; rofi is X11 -> fuzzel is the Wayland launcher)
-bindsym $mod+d       exec $menu
+# Launcher — rofi (WIN+d = run dialog; WIN+Shift+d = app launcher / drun).
+# rofi runs under XWayland and is the same launcher as the xmonad variant.
+bindsym $mod+d       exec rofi -show run
+bindsym $mod+Shift+d exec rofi -show drun
 
 # Browsers  (xmonad M-e / M-w)
 bindsym $mod+e       exec /home/berkeley/.guix-home/profile/bin/librewolf

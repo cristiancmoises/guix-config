@@ -67,7 +67,8 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 | `M-Return` / `M-0` / `M-a` | wezterm | `exec wezterm` | |
 | `M-o` | wezterm → `batata.sh` | same | |
 | `M-r` | wezterm → `turborecorder` | same | Sway resize-mode → `$mod+Shift+r` |
-| `M-d` | `rofi -show run` | `exec fuzzel` | rofi is X11 → **fuzzel** is the Wayland launcher |
+| `M-d` | `rofi -show run` | `exec rofi -show run` | rofi runs under XWayland — same launcher as xmonad. (`fuzzel` was **not installed**, which made WIN+d a no-op — fixed.) |
+| `M-S-d` | — | `exec rofi -show drun` | bonus: app (desktop-entry) launcher |
 | `M-e` | librewolf | `exec librewolf` | Sway split-toggle → `$mod+Shift+s` |
 | `M-w` | chromium | `exec chromium` | Sway tabbed → `$mod+Shift+w` |
 | `M-m` | cmus (in kitty) | `exec kitty -e cmus` | |
@@ -95,3 +96,20 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 
 **Apply after editing the Sway config:** `$mod+Shift+c` (reload) — or
 `swaymsg reload`. Validate offline with `sway --validate -c ~/.config/sway/config`.
+
+### Troubleshooting — "my Sway keybinds aren't working"
+
+- **`$mod` is `Mod4` = the Super/WIN key** (`set $mod Mod4`). WIN+d opens
+  `rofi -show run`.
+- **Launcher does nothing?** `fuzzel`/`wmenu`/`grim`/`slurp` are provided by
+  `config-sway.scm` (system) — if you're not actually booted on the Sway
+  generation they're missing. The launcher now uses **rofi** (from `home.scm`),
+  which is always present; `grim`/`slurp` were added to `home.scm` so the
+  screenshot binds also work regardless of the system generation.
+- **Nothing reloads?** The keybinds live in `~/.config/sway/config`, **not** in
+  `config-sway.scm`. After editing, `swaymsg reload` (or WIN+Shift+c) from inside
+  the running Sway session — a `guix system reconfigure` does **not** re-read
+  this user dotfile.
+- **Not in Sway at all?** Check `echo $XDG_SESSION_TYPE` / `pgrep sway`. If you're
+  still in the XLibre/xmonad X11 session, the Sway binds don't apply — log into
+  the greetd → Sway session first.

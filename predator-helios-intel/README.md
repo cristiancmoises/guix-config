@@ -86,6 +86,8 @@ Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram,
 
 **Keybinds & dotfiles:** the xmonad and Sway configs live in [`dotfiles/`](./dotfiles/) with a full **xmonad ↔ Sway keybind-parity map** and the writeup of the **xmonad "mod key sometimes stops working" fix** (PATH was never set in xmonad's process) — see [`dotfiles/README.md`](./dotfiles/README.md).
 
+**Benchmarks:** measured CPU / GPU / disk / crypto / security numbers that validate this config — ~4.95 GHz turbo under `powersave`, AES-NI making LUKS2 nearly free (1.0 GB/s encrypted writes), RTX 4060 on Vulkan 1.4, 31 GiB active swap — in [`BENCHMARKS.md`](./BENCHMARKS.md).
+
 <br>
 
 ## 🎮 Graphics — NVIDIA + Intel hybrid

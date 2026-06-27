@@ -385,6 +385,8 @@
          fnott
          awww
          wl-clipboard
+         grim                    ; Wayland screenshots (Sway WIN+i/n/j/z binds)
+         slurp                   ; region selection for grim
          wlrctl
          wlsunset
          compton
