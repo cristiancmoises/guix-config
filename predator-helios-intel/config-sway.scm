@@ -296,7 +296,10 @@
     ("ELM_DISPLAY"        . "wl")
     ("_JAVA_AWT_WM_NONREPARENTING" . "1")
     ;; Chromium/Electron (google-chrome): use the Wayland/Ozone path.
-    ("NIXOS_OZONE_WL"     . "1")))
+    ("NIXOS_OZONE_WL"     . "1")
+    ;; wlroots on the proprietary NVIDIA blob: disable atomic modesetting — the
+    ;; standard workaround for GBM/atomic-modeset bring-up failures on NVIDIA.
+    ("WLR_DRM_NO_ATOMIC"  . "1")))
 
 ;;; ──────────────────────────────────────────────────────────────────────────
 ;;; Operating system
@@ -337,7 +340,7 @@
      ;; LSM (no lockdown -> NVIDIA can load)
      "lsm=landlock,yama,apparmor"
      "apparmor=1"
-     "security=apparmor"
+     ;; (security=apparmor dropped: superseded by lsm= above; the kernel ignores it)
      ;; CPU frequency / scheduler
      "intel_pstate=active"
      "preempt=full"
@@ -345,12 +348,17 @@
      "numa_balancing=disable"    ; single-node laptop: no periodic NUMA scan stalls
      ;; Entropy / reliability
      "random.trust_cpu=off"
-     "mce=1"
      ;; NVIDIA (proprietary). nvidia_drm.modeset=1 is injected by
-     ;; nonguix-transformation-nvidia (bottom of file); not duplicated here.
+     ;; nonguix-transformation-nvidia (bottom of file). fbdev=1 gives the VT a
+     ;; framebuffer console under modeset — REQUIRED so the greetd text greeter and
+     ;; Sway have a visible console on NVIDIA. Without it the VT goes black and the
+     ;; login fails ("does not start well"); XLibre never needs it because the X
+     ;; server drives KMS directly. THIS is the most likely Sway-boot fix.
      "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
-     ;; Attack-surface reduction + block nouveau
-     "modprobe.blacklist=nouveau,firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
+     "nvidia_drm.fbdev=1"
+     ;; Attack-surface reduction. One authoritative blacklist (nouveau + nova folded
+     ;; in here; nonguix also injects nouveau/nova as separate tokens).
+     "modprobe.blacklist=nouveau,nova_core,nova_drm,firewire_core,firewire_ohci,dccp,sctp,rds,tipc"))
 
   (initrd microcode-initrd)
   ;; sof-firmware: Intel Sound Open Firmware DSP blobs + topology (sof-tplg).
@@ -1055,7 +1063,10 @@ DisableDebuggerAttachment 1
             (mount-point "/tmp")
             (type "tmpfs")
             (check? #f)
-            (flags '(no-suid no-dev no-exec))
+            ;; noexec dropped for the Sway first boot — matches the known-good
+            ;; XLibre /tmp (a well-known session-breaker variable). 16G cap kept;
+            ;; re-add no-exec once Sway is confirmed booting.
+            (flags '(no-suid no-dev))
             (options "mode=1777,size=16G")
             (create-mount-point? #t))
           %base-file-systems))))

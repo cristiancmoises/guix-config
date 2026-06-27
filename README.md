@@ -28,6 +28,82 @@ Declarative, hardened, private, and fast [GNU Guix](https://guix.gnu.org) System
 
 <br>
 
+## 💻 Predator Helios — at a glance
+
+The current daily driver: an Acer gaming laptop carrying the full SecurityOps stack with two interchangeable display variants.
+
+```text
+┌─────────────────────────── HARDWARE ───────────────────────────┐
+│ Laptop   Acer Predator Helios Neo 16 (PHN16-71)                 │
+│ CPU      Intel Core i7-13700HX — Raptor Lake-HX                 │
+│            8 P-cores + 8 E-cores · 24 threads                   │
+│ GPU      NVIDIA GeForce RTX 4060 Laptop (Ada, AD107)            │
+│            + Intel UHD iGPU (Optimus/MUX)                       │
+│ RAM      16 GiB                                                 │
+│ Storage  1 TB NVMe behind Intel VMD                            │
+│ Disk     LUKS2 full-disk encryption (cryptroot + crypthome)    │
+│ Host     securityops   ·   User  berkeley                       │
+└────────────────────────────────────────────────────────────────┘
+```
+
+- **Graphics:** proprietary **NVIDIA 580.159.04** grafted OS-wide (`mesa → nvda-580`) so Steam / pressure-vessel and every GL/Vulkan app hits the RTX 4060; **Mesa kept only for the Intel UHD iGPU**; `nvidia-powerd` Dynamic Boost on; nouveau blacklisted.
+- **Kernel:** boots nonguix **`linux`** (blob-enabled) so the prebuilt `nvidia.ko` loads; a dormant custom `securityops` kernel + MOK-signing path is parked in the config for a future return to the monolithic posture.
+- **Boot & storage:** `vmd` initrd module (the encrypted NVMe is invisible without it) → two LUKS2 mapped devices (`cryptroot` + `crypthome`) → `grub-efi-bootloader`.
+- **Two display variants** (identical kernel, hardening, firewall, Tor, Mullvad, zram, audio — they differ *only* in the display server + login manager):
+
+| File | Display server | Login manager | Session WM |
+|------|----------------|---------------|------------|
+| [`config-sway.scm`](./predator-helios-intel/config-sway.scm) | **Sway / wlroots (Wayland)** | **greetd** (agreety text greeter) | **Sway** |
+| [`config-xlibre.scm`](./predator-helios-intel/config-xlibre.scm) | XLibre 25.1.7 (X11) | SLiM | xmonad |
+
+> `config.scm` is the **active** file and currently mirrors **`config-sway.scm`**. Full writeup → [`predator-helios-intel/README.md`](./predator-helios-intel/README.md).
+
+<br>
+
+## 📊 Benchmarks
+
+Measured **2026-06-27**, kernel **7.1.1**, governor `powersave` + EPP `balance_performance` (the laptop's normal thermal-balanced state — **not** a pinned performance mode), on AC power. Every number validates a specific choice in `config.scm` / `securityops.defconfig`. Full methodology and notes → [`predator-helios-intel/BENCHMARKS.md`](./predator-helios-intel/BENCHMARKS.md).
+
+| Area | Metric | Result |
+|------|--------|--------|
+| **CPU** | 1-thread turbo under load (on `powersave`) | **~4.95 GHz** |
+| **CPU** | 24-thread sustained clock | ~3.59 GHz |
+| **CPU** | 7-Zip (all threads, compress + decompress) | **~52,400 MIPS** |
+| **Crypto** | OpenSSL SHA-256 (1 thread, 16 KiB) | ~2.40 GB/s |
+| **Crypto** | OpenSSL AES-256-GCM (1 thread, AES-NI) | **~7.15 GB/s** |
+| **Crypto** | OpenSSL AES-256-GCM (24 threads, aggregate) | **~39.5 GB/s** |
+| **Storage** | `/var/tmp` write — LUKS2-encrypted root, ext4 (`fdatasync`) | **~1.0 GB/s** |
+| **Storage** | `/tmp` write — tmpfs (RAM) | **~5.7 GB/s** |
+| **Memory** | RAM / zram (zstd) / encrypted swapfile → **total swap** | 16 GiB / 8 GiB / 24 GiB → **31 GiB** |
+| **GPU** | NVIDIA RTX 4060 Laptop — driver / Vulkan / idle temp | **580.159.04** / **Vulkan 1.4.312** / **44 °C** |
+| **Security** | lynis hardening index (non-root `--quick`, 205 tests) | **63** |
+
+> Headline: the box hits **full single-core turbo (~4.95 GHz) under load even on the `powersave` governor**, AES-NI makes the LUKS2 full-disk encryption nearly free (1.0 GB/s encrypted writes), and the NVIDIA + zram + swap stack is live exactly as configured.
+
+<br>
+
+## 🖥️ Sway (Wayland) vs XLibre (X11)
+
+Both variants boot the **same** kernel, hardening, firewall, Tor, Mullvad, zram and NVIDIA graft — they differ **only** in the display layer, but that layer has real security consequences. Condensed from [`predator-helios-intel/README.md`](./predator-helios-intel/README.md#-sway-wayland-vs-xlibre-x11--benefits--differences):
+
+| | **`config-sway.scm`** — Sway / Wayland | **`config-xlibre.scm`** — XLibre / X11 |
+|---|---|---|
+| **Display server** | Sway (wlroots compositor) | XLibre X server 25.1.7 (X.Org fork) |
+| **Login manager** | greetd (agreety **text** greeter) | SLiM (graphical X greeter) |
+| **Window manager** | Sway (built-in tiling) | xmonad (+ xmobar) |
+| **NVIDIA** | `--unsupported-gpu` + `nvidia_drm.modeset=1` + software cursor | native `nvidia` DDX, `ForceFullCompositionPipeline` |
+| **`/tmp`** | **16 GiB, `nosuid,nodev,noexec`** (hardened) | 4 GiB `nosuid,nodev` |
+| **`ptrace_scope`** | **`2` (hardened)** — RDR2 needs a runtime toggle | `1` (relaxed so RDR2/Arxan runs out of the box) |
+| **Security posture** | **more secure** (client isolation, smaller surface) | more compatible (X11 tooling, no GPU caveats) |
+
+### Why the Sway variant is more secure 🔐
+
+- **Client isolation (the big one).** Under X11 *any* client can read every other window's keystrokes and pixels (global input + `XGetImage`) — one compromised app can keylog your password manager or screen-scrape a banking tab. Wayland isolates clients so an app sees only its **own** surface and input.
+- **Smaller privileged surface.** No monolithic, historically-CVE-heavy X server brokering all I/O; wlroots is far smaller and runs unprivileged via libseat/elogind, and the greeter is a minimal **text** prompt (no compositor at the login stage).
+- **Hardened ephemeral scratch + strongest `ptrace`.** `/tmp` is a 16 GiB `noexec` RAM tmpfs wiped each reboot with spill going to the **LUKS2-encrypted** swapfile (no plaintext leak), and `kernel.yama.ptrace_scope=2` by default (lower it at runtime only when a game's anti-tamper needs it).
+
+<br>
+
 ## 🗂️ Repository layout
 
 ```text
@@ -42,9 +118,13 @@ guix-config/
 ├── videos/
 │
 ├── predator-helios-intel/        # 🟢 CURRENT — Intel i7-13700HX + RTX 4060 laptop
-│   ├── config.scm                #   Guix System: nonguix linux + NVIDIA graft + VMD initrd
-│   ├── home.scm                  #   Guix Home: fish + starship, IME, apps
+│   ├── config.scm                #   ACTIVE system config (currently mirrors config-sway.scm)
+│   ├── config-sway.scm           #   Sway / Wayland + greetd variant
+│   ├── config-xlibre.scm         #   XLibre / X11 + SLiM + xmonad variant
+│   ├── home.scm                  #   Guix Home: fish + starship, IME, apps, NVIDIA graft
 │   ├── securityops.defconfig     #   DORMANT custom-kernel defconfig (reference / future MOK build)
+│   ├── BENCHMARKS.md             #   measured CPU / GPU / disk / crypto / security numbers
+│   ├── dotfiles/                 #   xmonad.hs + Sway config + keybind-parity map + helpers
 │   └── README.md
 │
 └── ryzen-2200g-amd/              # 🗄️ ARCHIVED — Ryzen 3 2200G + RX 5600/5700 desktop
@@ -78,6 +158,8 @@ guix home reconfigure predator-helios-intel/home.scm              # current lapt
 ```
 
 > `channels.scm` lives at the repo **root** and is shared by both machines — same self-hosted mirrors at `git.securityops.co` (guix, nonguix, rde, radix, ajattix, rosenthal, guix-hpc, small-guix, guix-xlibre, saayix).
+>
+> **Switch display variants on the laptop:** apply Sway with `sudo bash ~/promote-sway-config.sh` then `sudo guix system reconfigure --fallback /etc/config.scm` from a physical TTY; revert with `sudo guix system roll-back` or by reconfiguring from `config-xlibre.scm`.
 
 <br>
 
@@ -108,6 +190,16 @@ The git history was rewritten to purge multi-GB screen recordings (`record.mkv` 
 
 <br>
 
+## 📚 Further reading
+
+- **[`predator-helios-intel/README.md`](./predator-helios-intel/README.md)** — the current laptop in full: NVIDIA graft, kernel, boot/storage, Sway-vs-XLibre, gaming, kernel arguments.
+- **[`predator-helios-intel/BENCHMARKS.md`](./predator-helios-intel/BENCHMARKS.md)** — measured CPU / GPU / disk / crypto / security numbers and methodology.
+- **[`predator-helios-intel/dotfiles/README.md`](./predator-helios-intel/dotfiles/README.md)** — xmonad ↔ Sway keybind-parity map and the xmonad "mod key" PATH fix.
+- **[`comparison.md`](./comparison.md)** — the complete AMD desktop → Intel/NVIDIA laptop migration (every config delta, with reasons).
+- **[`ryzen-2200g-amd/README.md`](./ryzen-2200g-amd/README.md)** — the archived AMD desktop.
+
+<br>
+
 ## 📸 Screenshots
 
 <p align="center">
@@ -125,7 +217,7 @@ The git history was rewritten to purge multi-GB screen recordings (`record.mkv` 
 
 - **Maintainer:** [Cristian Cezar Moisés](https://linkedin.com/in/cristiancezarmoises)
 - **License:** GNU GPL-3.0
-- **Last updated:** June 09, 2026
+- **Last updated:** 2026-06-27
 - **Videos** → https://youtube.com/@securityops
 
 ---
