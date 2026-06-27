@@ -276,6 +276,10 @@
   '(;; wlroots on the NVIDIA blob: the hardware cursor plane is broken, so force
     ;; a software cursor — otherwise the pointer is invisible or garbled.
     ("WLR_NO_HARDWARE_CURSORS" . "1")
+    ;; Seat backend: use seatd (seatd-service-type runs the daemon). The
+    ;; logind/elogind seat path fails under greetd here ("Only owner of session
+    ;; may take control"), so force seatd — the reliable wlroots backend on Guix.
+    ("LIBSEAT_BACKEND"         . "seatd")
     ;; GLES2 is the most compatible wlroots renderer on the NVIDIA blob.
     ("WLR_RENDERER"            . "gles2")
     ;; Belt-and-suspenders with the --unsupported-gpu command-line flag.
@@ -398,7 +402,8 @@
      (home-directory "/home/berkeley")
      (supplementary-groups
       '("wheel" "input" "docker" "kvm" "libvirt" "netdev"
-        "audio" "video" "plugdev")))
+        "audio" "video" "plugdev"
+        "seat")))   ; seat: libseat/seatd access so Sway/wlroots can take the seat
     %base-user-accounts))
 
   ;; plugdev is referenced above but is NOT in %base-groups; define it.
@@ -697,6 +702,14 @@
      ;; tty1–6 keep their normal gettys; greetd takes vt7 (the VT SLiM used).
      ;; If Sway ever fails to come up you simply land back on a TTY — switch with
      ;; Ctrl+Alt+F1..F6 and reconfigure/rollback from there.
+     ;; seatd: wlroots/Sway takes its seat (DRM master + input) from seatd, NOT
+     ;; logind. Confirmed via `sway -d`: without this Sway dies instantly with
+     ;; "libseat: No backend was able to open a seat" + "logind: Only owner of
+     ;; session may take control". seatd-service-type runs the daemon (creates
+     ;; /run/seatd.sock) and the "seat" group (berkeley is a member, above);
+     ;; %sway-session-env sets LIBSEAT_BACKEND=seatd. elogind stays for power/logind.
+     (service seatd-service-type)
+
      (service greetd-service-type
        (greetd-configuration
         ;; video+input let a *graphical* greeter (if you later switch to
