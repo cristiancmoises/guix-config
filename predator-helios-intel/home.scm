@@ -578,23 +578,9 @@
    ;; it from your Xmonad startupHook or save it via `autorandr --save docked`.
    (service home-files-service-type
             `((".local/bin/dual-monitor"
-               ,(plain-file "dual-monitor"
-"#!/bin/sh
-# Dual-monitor layout for the Helios Neo 16.
-# Run `xrandr --query` first and replace the output names below.
-#   eDP-1  = internal panel        (often eDP-1 / eDP-1-1)
-#   HDMI-0 = external via HDMI      (NVIDIA names: HDMI-0 / DP-0 / DP-1)
-INTERNAL=eDP-1
-EXTERNAL=HDMI-0
-
-if xrandr --query | grep -q \"^$EXTERNAL connected\"; then
-    # External right of internal, both at native; primary = external.
-    xrandr --output \"$INTERNAL\" --auto --primary \\
-           --output \"$EXTERNAL\" --auto --right-of \"$INTERNAL\"
-else
-    xrandr --output \"$INTERNAL\" --auto --primary
-fi
-"))
+               ,(local-file
+                 "/home/berkeley/guix-config/predator-helios-intel/dotfiles/dual-monitor"
+                 #:recursive? #t))
               ;; Screen-brightness two-stage dimmer (repo: dotfiles/brightness-step):
               ;; hardware backlight, then xrandr software gamma below the hardware
               ;; floor for much darker low-end dimming, with cross-session persistence.

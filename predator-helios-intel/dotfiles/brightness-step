@@ -68,8 +68,14 @@ case "${1:-}" in
     (( rsw < SW_MIN )) && rsw=$SW_MIN; (( rsw > 100 )) && rsw=100
     "$BCTL" -q set "$rbl"; apply_sw "$rsw"
     exit 0 ;;
+  set)
+    n=${2:-50}
+    case "$n" in ''|*[!0-9]*) n=50 ;; esac
+    (( n > 100 )) && n=100; (( n < 1 )) && n=1
+    "$BCTL" -q set "${n}%"; apply_sw 100
+    bl=$(< "$BL/brightness"); sw=100 ;;
   *)
-    echo "usage: ${0##*/} up|down|restore" >&2; exit 1 ;;
+    echo "usage: ${0##*/} up|down|set <pct>|restore" >&2; exit 1 ;;
 esac
 
 save "$bl" "$sw"

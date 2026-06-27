@@ -1,0 +1,15 @@
+#!/bin/sh
+# Dual-monitor layout for the Acer Predator Helios (NVIDIA).
+# The internal panel is DP-4 under the nvidia driver (confirmed via `xrandr --query`).
+# Plug in an external display and check its name with `xrandr --query`, then set
+# EXTERNAL below. NVIDIA names the ports HDMI-0 / DP-0 .. DP-3 (varies by port).
+INTERNAL=DP-4
+EXTERNAL=HDMI-0
+
+if xrandr --query | grep -q "^$EXTERNAL connected"; then
+    # External right of internal, both at native; primary = external.
+    xrandr --output "$INTERNAL" --auto --primary \
+           --output "$EXTERNAL" --auto --right-of "$INTERNAL"
+else
+    xrandr --output "$INTERNAL" --auto --primary
+fi
