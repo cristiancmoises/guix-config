@@ -69,6 +69,9 @@ hide_edge_borders       smart
 ### Autostart ###############################################################
 # exec waybar        # top status bar — DISABLED per user request (no top bar)
 exec mako
+# Bluetooth: blueman-manager needs blueman-applet (the agent) running to pair/connect.
+# It normally rides the waybar tray, which is disabled here — so start it explicitly.
+exec blueman-applet
 # Input method (fcitx5 for Japanese IME — env vars are set by config.scm's
 # jp-ime-env service). Uncomment if fcitx5 is installed in your profile/home:
 # exec fcitx5 -d --replace
