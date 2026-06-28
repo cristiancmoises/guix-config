@@ -89,7 +89,8 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 
 | xmonad | Why no equivalent | What Sway does instead |
 |--------|-------------------|------------------------|
-| `M-l` — send-to-empty-workspace | Sway has no "empty workspace" primitive | `M-l` is **unbound** — the screen lock was removed; use `$mod+Shift+<n>` to move to a workspace |
+| `M-Space` — cycle layout (Tall↔Full) | per request | **`$mod+Space` = MAXIMIZE** (`fullscreen toggle`) — the "Full" half of xmonad's Space |
+| `M-l` — send-to-empty-workspace | Sway has no "empty workspace" primitive | **`$mod+l` = cycle layout view** (`split→tabbed→stacking`) — the "change layout" half of xmonad's Space (`l` = Layout; the screen lock was removed) |
 | `M-t` — view-empty-workspace | same | `$mod+t` = toggle focus tiling↔floating |
 | `M-v` — EasyMotion window-swap | no EasyMotion on wlroots | `$mod+v` = `splitv` |
 | `M-f` — `W.sink` (un-float) | — | `$mod+f` = **`floating disable`** (un-float — exact M-f match); maximize is `$mod+space` |

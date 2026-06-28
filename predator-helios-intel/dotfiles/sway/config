@@ -114,7 +114,7 @@ bindsym $mod+Print   exec grim -g "$(slurp)" - | wl-copy
 bindsym $mod+q       kill
 bindsym $mod+Shift+q kill
 bindsym $mod+b       exec killall -SIGUSR1 waybar    # xmonad M-b toggled the xmobar struts; SIGUSR1 toggles waybar
-# bindsym $mod+l     screen lock REMOVED per user request — $mod+l is now unbound (free)
+# ($mod+l is now "cycle layout view" — see the Layout section below; the screen lock was removed)
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+e exec swaynag -t warning \
     -m 'Exit Sway and end the Wayland session?' \
@@ -174,6 +174,7 @@ bindsym $mod+Shift+b       splith              # relocated ($mod+b now toggles t
 bindsym $mod+Shift+w       layout tabbed       # relocated ($mod+w now launches chromium)
 bindsym $mod+Shift+s       layout toggle split # relocated ($mod+e now launches librewolf)
 bindsym $mod+space         fullscreen toggle   # MAXIMIZE the focused window (press again to restore)
+bindsym $mod+l             layout toggle split tabbed stacking  # CHANGE LAYOUT VIEW: cycle split->tabbed->stacking (l = Layout; was the removed lock). xmonad changed layout with Space; here Space=maximize, l=layout.
 bindsym $mod+t             focus mode_toggle   # relocated from $mod+space: toggle focus tiling<->floating
 bindsym $mod+Shift+space   floating toggle     # float / un-float the focused window
 floating_modifier $mod normal
