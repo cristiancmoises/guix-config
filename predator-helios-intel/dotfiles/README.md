@@ -82,17 +82,17 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 | `M-h` | shrink master | `resize shrink width` | |
 | `M-Tab` | focus next | `focus next` | |
 | `M-1`…`9` / `M-S-1`…`9` | workspace / move-to-ws | same | Sway ws10 (`$mod+0`) dropped (xmonad has 9) |
-| arrows | — | focus / move | **focus/move is on arrows** since `h/j/k/l` are app/lock binds |
+| arrows | — | focus / move | **focus/move is on arrows** since `h/j/k` are app/resize binds (`l` is now free — screen lock removed) |
 | `XF86MonBrightness{Up,Down}` | `brightness-step` (xrandr gamma) | `brightnessctl` | gamma is X11-only → brightnessctl on Wayland |
 
 ### Bindings with **no Sway equivalent** (flagged in the config)
 
 | xmonad | Why no equivalent | What Sway does instead |
 |--------|-------------------|------------------------|
-| `M-l` — send-to-empty-workspace | Sway has no "empty workspace" primitive | `M-l` keeps **swaylock** (screen lock); use `$mod+Shift+<n>` to move to a workspace |
-| `M-t` — view-empty-workspace | same | unbound; use `$mod+<n>` |
+| `M-l` — send-to-empty-workspace | Sway has no "empty workspace" primitive | `M-l` is **unbound** — the screen lock was removed; use `$mod+Shift+<n>` to move to a workspace |
+| `M-t` — view-empty-workspace | same | `$mod+t` = toggle focus tiling↔floating |
 | `M-v` — EasyMotion window-swap | no EasyMotion on wlroots | `$mod+v` = `splitv` |
-| `M-f` — `W.sink` (un-float) | — | `$mod+f` = **fullscreen** (more useful); `$mod+Shift+space` un-floats |
+| `M-f` — `W.sink` (un-float) | — | `$mod+f` = **`floating disable`** (un-float — exact M-f match); maximize is `$mod+space` |
 
 **Apply after editing the Sway config:** `$mod+Shift+c` (reload) — or
 `swaymsg reload`. Validate offline with `sway --validate -c ~/.config/sway/config`.

@@ -60,13 +60,13 @@ default_floating_border pixel 2
 # Drop the border too when a workspace holds a single window (clean fullscreen-ish look).
 hide_edge_borders       smart
 
-### Idle / lock #############################################################
-# Lock after 5 min, screens off after 10, lock before sleep.
+### Idle / screen-off (screen LOCK removed per user request) ################
+# No swaylock anywhere — nothing to unlock. Screens just power off after 10 min
+# idle (DPMS) and come back at activity. (To restore locking, re-add a
+# `timeout 300 'swaylock -f -c 000000'` and a `before-sleep 'swaylock …'` line.)
 exec swayidle -w \
-    timeout 300  'swaylock -f -c 000000' \
     timeout 600  'swaymsg "output * power off"' \
-    resume       'swaymsg "output * power on"' \
-    before-sleep 'swaylock -f -c 000000'
+    resume       'swaymsg "output * power on"'
 
 ### Autostart ###############################################################
 # exec waybar        # top status bar — DISABLED per user request (no top bar)
@@ -116,7 +116,7 @@ bindsym $mod+Print   exec grim -g "$(slurp)" - | wl-copy
 bindsym $mod+q       kill
 bindsym $mod+Shift+q kill
 bindsym $mod+b       exec killall -SIGUSR1 waybar    # xmonad M-b toggled the xmobar struts; SIGUSR1 toggles waybar
-bindsym $mod+l       exec swaylock -f -c 000000      # xmonad M-l = send-to-empty-workspace: NO sway equivalent; lock kept here
+# bindsym $mod+l     screen lock REMOVED per user request — $mod+l is now unbound (free)
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+e exec swaynag -t warning \
     -m 'Exit Sway and end the Wayland session?' \
