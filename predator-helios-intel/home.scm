@@ -191,6 +191,8 @@
    (append
    ;; ── Development tools ──
    (list bash
+         gzip
+         tar
          cmake
          llvm-for-mesa
          meson
@@ -759,7 +761,12 @@ bass source /home/berkeley/.config/nvm/nvm.sh --no-use")))
    ;; ── Environment variables (AMD DRI_PRIME removed; NVIDIA shader cache added) ──
    (simple-service 'environment-variables-service
                    home-environment-variables-service-type
-                   `(("PATH" . "$HOME/.local/bin:/home/berkeley/.bun/bin:$PATH")
+                   ;; Append the SYSTEM profile so packages declared in config.scm
+                   ;; (lynis, mullvad-vpn, htop, btop, killall, nft, …) resolve in
+                   ;; every shell (TTY, SSH, fish/bash, terminals). Home/Guix-Home
+                   ;; binaries still win ties (they come before $PATH); the system
+                   ;; profile is only consulted for packages Home doesn't provide.
+                   `(("PATH" . "$HOME/.local/bin:/home/berkeley/.bun/bin:$PATH:/run/current-system/profile/bin:/run/current-system/profile/sbin")
                      ("GUILE_WARN_DEPRECATED" . "detailed")
                      ("GTK_IM_MODULE" . "fcitx")
                      ("QT_IM_MODULE" . "fcitx")
