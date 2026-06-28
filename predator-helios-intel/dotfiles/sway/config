@@ -169,14 +169,15 @@ bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
 
 ### Layout (xmonad-parity: b/w/e/a/r are app binds above; ops relocated) ###
-bindsym $mod+f             fullscreen
+bindsym $mod+f             floating disable    # xmonad M-f = W.sink (un-float the focused window)
 bindsym $mod+s             layout stacking
 bindsym $mod+v             splitv              # NOTE: xmonad M-v = EasyMotion window-swap: NO sway equivalent
 bindsym $mod+Shift+b       splith              # relocated ($mod+b now toggles the bar)
 bindsym $mod+Shift+w       layout tabbed       # relocated ($mod+w now launches chromium)
 bindsym $mod+Shift+s       layout toggle split # relocated ($mod+e now launches librewolf)
-bindsym $mod+space         focus mode_toggle
-bindsym $mod+Shift+space   floating toggle     # closest to xmonad M-f "sink" (un-float)
+bindsym $mod+space         fullscreen toggle   # MAXIMIZE the focused window (press again to restore)
+bindsym $mod+t             focus mode_toggle   # relocated from $mod+space: toggle focus tiling<->floating
+bindsym $mod+Shift+space   floating toggle     # float / un-float the focused window
 floating_modifier $mod normal
 
 ### Resize mode (relocated: $mod+r now launches turborecorder) #############
