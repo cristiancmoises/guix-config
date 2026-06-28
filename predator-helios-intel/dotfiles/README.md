@@ -102,6 +102,20 @@ overridden on purpose, and the displaced ops relocated (see the table's notes).
 
 - **`$mod` is `Mod4` = the Super/WIN key** (`set $mod Mod4`). WIN+d opens
   `rofi -show run`.
+- **The whole modkey is dead (no `$mod+…` works at all, but typing works)?** The
+  **Acer WIN-key lock** — the key with the **lock + Windows** icon disables Super at
+  the firmware level so it emits *nothing*; `Mod4` never fires. Toggle it off (often
+  `Fn` + that key). See the modkey section above. *(This is the #1 cause and looks
+  exactly like "keybinds broke" — it bit us on a generation switch.)*
+- **One specific window command does nothing (e.g. `$mod+Space` won't maximize)?**
+  **Sway does NOT support inline `#` comments on command lines** — the comment text is
+  parsed as command *arguments*, so strict verbs silently fail while `exec` and
+  tolerant verbs (`layout`, `focus`) survive, which masks the bug. Example:
+  `bindsym $mod+space fullscreen toggle  # MAXIMIZE…` →
+  `Invalid fullscreen command (expected at most 2 arguments, got 10)` → no-op. This
+  broke `fullscreen`/`floating`/`splitv`/`splith`/`resize` here. **Keep `bindsym`
+  command lines comment-free** (put notes on their own line). Diagnose by running the
+  exact command: `swaymsg 'fullscreen toggle  # x'` → `success: false` confirms it.
 - **Launcher does nothing?** `fuzzel`/`wmenu`/`grim`/`slurp` are provided by
   `config-sway.scm` (system) — if you're not actually booted on the Sway
   generation they're missing. The launcher now uses **rofi** (from `home.scm`),

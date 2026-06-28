@@ -54,16 +54,27 @@ options also pin `PULSE_SINK=<that speaker sink>` per-game.
 
 - **Proton:** GE-Proton10-34 (pinned). **Launch options (MangoHud REMOVED — see below):**
   `WINE_DISABLE_VULKAN_OPWR=0 PROTON_ENABLE_NVAPI=1 DXVK_LOG_LEVEL=none __GL_GSYNC_ALLOWED=0 __GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SIZE=12000000000 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%`
-- **Sway-era "won't launch" (PlayRDR2.exe exits ~5 s, no window):** RDR2 ran fine on
-  X11 (Jun 25, 240 s stable) but on the Sway generation `PlayRDR2.exe` dies in ~5 s
-  before any window (Steam `console_log.txt`). The one env RDR2 had that GTA V (which
-  still launches) did NOT is **`MANGOHUD=1`** — a 5 s death is the signature of a bad
-  Vulkan *implicit layer* crashing the process at instance creation. **Fix: drop
-  `MANGOHUD=1 MANGOHUD_CONFIG=…` from the launch options** (done above). If it still
-  exits ~5 s, append **`PROTON_LOG=1`** (safe here — it exits fast, so no I/O-storm like
-  GTA V's load-time logging) and read `~/.local/share/guix-sandbox-home/steam-1174180.log`
-  for the failing module. (`rdr2-boot-final.sh` was also fixed to inherit the Sway/XWayland
-  `DISPLAY`/`XAUTHORITY` instead of the X11 `:0`/`~/.Xauthority` hardcodes.)
+- **Sway-era "won't launch" — ✅ CONFIRMED root cause + fix (RDR2 launches again):**
+  RDR2 ran fine on X11 (Jun 25, 240 s stable) but on the Sway generation `PlayRDR2.exe`
+  died in ~5 s before any window (Steam `console_log.txt`: process added → removed 5 s
+  later, every attempt). The one env RDR2 carried that GTA V (which still launches) did
+  NOT is **`MANGOHUD=1`** — its Vulkan *implicit layer* crashes the process at
+  `vkCreateInstance` (a ~5 s death is that signature). **Fix: remove
+  `MANGOHUD=1 MANGOHUD_CONFIG=…` from the launch options** (done above). **Verified
+  2026-06-28:** after stripping MangoHud, `RDR2.exe` spawned at ~24 s and ran steadily
+  (133 s+ uptime, **5.8 GB VRAM** on the RTX 4060) — fully past the old crash.
+  - **How to remove it:** Steam rewrites `userdata/<id>/config/localconfig.vdf` on exit,
+    so either (a) **close Steam first**, then delete the MangoHud substring from that file
+    (back it up — a `localconfig.vdf.bak-mangohud-fix` was kept), or (b) edit it live via
+    **Steam → RDR2 → Properties → Launch Options**. Don't re-add `MANGOHUD=1`.
+  - If a future regression still exits ~5 s, append **`PROTON_LOG=1`** (safe — it exits
+    fast, no I/O storm like GTA V's load-time logging) and read
+    `~/.local/share/guix-sandbox-home/steam-1174180.log` for the failing module.
+  - **Launch helper:** `bash rdr2-boot-final.sh` (stop → `steam -silent` → wait
+    webhelper → `steam://rungameid/1174180` → monitor). It was fixed to **inherit the
+    Sway/XWayland `DISPLAY`/`XAUTHORITY`** instead of the X11 `:0`/`~/.Xauthority`
+    hardcodes (under Sway, Xwayland is `:0` with `-listenfd`/no-auth and the session
+    exports no `XAUTHORITY`).
 - **Graphics** (`rdr2-system.xml` → game's `…/Red Dead Redemption 2/Settings/system.xml`):
   all-Ultra; the stutter was RAM/swap thrash, not GPU, so quality stays maxed.
   **`windowed=0` (exclusive fullscreen)** for the single laptop display when the TV is
