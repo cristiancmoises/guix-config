@@ -9,7 +9,11 @@ CD="$SBX/steamapps/compatdata/1174180"
 DOC="$CD/pfx/drive_c/users/steamuser/Documents/Rockstar Games/Red Dead Redemption 2"
 SYSXML="$DOC/Settings/system.xml"
 LAUNLOG="$CD/pfx/drive_c/users/steamuser/Documents/Rockstar Games/Launcher/launcher.log"
-DISP=":0"; XAUTH="$HOME/.Xauthority"; STEAMBIN="$HOME/.guix-home/profile/bin/steam"; G="Red Dead"
+# Display: INHERIT from the session. Under Sway, Xwayland is :0 but runs with
+# -listenfd and NO -auth, and Sway exports no XAUTHORITY — so the old X11 hardcodes
+# (:0 + ~/.Xauthority) break the X connection. Inherit DISPLAY/XAUTHORITY/WAYLAND_DISPLAY
+# (fallbacks keep the X11/xmonad variant working); XAUTH is empty under Sway = correct.
+DISP="${DISPLAY:-:0}"; XAUTH="${XAUTHORITY:-}"; STEAMBIN="$HOME/.guix-home/profile/bin/steam"; G="Red Dead"
 OUT="$HOME/rdr2-boot-final.txt"; : > "$OUT"; say(){ echo "$@" | tee -a "$OUT"; }
 
 say "==> sysctls: ptrace=$(cat /proc/sys/kernel/yama/ptrace_scope) max_map_count=$(cat /proc/sys/vm/max_map_count)"
@@ -22,13 +26,15 @@ pkill -KILL -f "$G Redemption 2" 2>/dev/null||true; pkill -x wineserver 2>/dev/n
 
 say "==> launch steam (-silent, NO nscd share — that broke /var/run audio -> GLA cancel)"
 setsid env \
-  DISPLAY="$DISP" XAUTHORITY="$XAUTH" __GLX_VENDOR_LIBRARY_NAME=nvidia \
+  DISPLAY="$DISP" ${XAUTH:+XAUTHORITY="$XAUTH"} \
+  WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/1000}" \
+  __GLX_VENDOR_LIBRARY_NAME=nvidia \
   nohup "$STEAMBIN" -silent >/dev/null 2>&1 &
 for i in $(seq 1 90); do ps -eo comm|grep -qx steamwebhelper && break; sleep 2; done
 say "    steamwebhelper up; settling 12s before game launch"; sleep 12
 
 say "==> launch RDR2 from SAME steam context (no second steam)"
-env DISPLAY="$DISP" XAUTHORITY="$XAUTH" "$STEAMBIN" steam://rungameid/1174180 >/dev/null 2>&1 &
+env DISPLAY="$DISP" ${XAUTH:+XAUTHORITY="$XAUTH"} "$STEAMBIN" steam://rungameid/1174180 >/dev/null 2>&1 &
 
 seen=0
 for i in $(seq 1 240); do

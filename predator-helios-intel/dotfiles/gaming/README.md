@@ -52,8 +52,18 @@ options also pin `PULSE_SINK=<that speaker sink>` per-game.
 
 ## RDR2 (appid 1174180) — `rdr2-system.xml`, `rdr2-boot-final.sh`, `vkBasalt.conf`
 
-- **Proton:** GE-Proton10-34 (pinned). **Launch options:**
-  `WINE_DISABLE_VULKAN_OPWR=0 PROTON_ENABLE_NVAPI=1 DXVK_LOG_LEVEL=none __GL_GSYNC_ALLOWED=0 __GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SIZE=12000000000 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 MANGOHUD=1 MANGOHUD_CONFIG=fps_limit=158,no_display=1 %command%`
+- **Proton:** GE-Proton10-34 (pinned). **Launch options (MangoHud REMOVED — see below):**
+  `WINE_DISABLE_VULKAN_OPWR=0 PROTON_ENABLE_NVAPI=1 DXVK_LOG_LEVEL=none __GL_GSYNC_ALLOWED=0 __GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SIZE=12000000000 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%`
+- **Sway-era "won't launch" (PlayRDR2.exe exits ~5 s, no window):** RDR2 ran fine on
+  X11 (Jun 25, 240 s stable) but on the Sway generation `PlayRDR2.exe` dies in ~5 s
+  before any window (Steam `console_log.txt`). The one env RDR2 had that GTA V (which
+  still launches) did NOT is **`MANGOHUD=1`** — a 5 s death is the signature of a bad
+  Vulkan *implicit layer* crashing the process at instance creation. **Fix: drop
+  `MANGOHUD=1 MANGOHUD_CONFIG=…` from the launch options** (done above). If it still
+  exits ~5 s, append **`PROTON_LOG=1`** (safe here — it exits fast, so no I/O-storm like
+  GTA V's load-time logging) and read `~/.local/share/guix-sandbox-home/steam-1174180.log`
+  for the failing module. (`rdr2-boot-final.sh` was also fixed to inherit the Sway/XWayland
+  `DISPLAY`/`XAUTHORITY` instead of the X11 `:0`/`~/.Xauthority` hardcodes.)
 - **Graphics** (`rdr2-system.xml` → game's `…/Red Dead Redemption 2/Settings/system.xml`):
   all-Ultra; the stutter was RAM/swap thrash, not GPU, so quality stays maxed.
   **`windowed=0` (exclusive fullscreen)** for the single laptop display when the TV is
