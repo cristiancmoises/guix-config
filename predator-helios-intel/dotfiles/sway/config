@@ -60,13 +60,11 @@ default_floating_border pixel 2
 # Drop the border too when a workspace holds a single window (clean fullscreen-ish look).
 hide_edge_borders       smart
 
-### Idle / screen-off (screen LOCK removed per user request) ################
-# No swaylock anywhere — nothing to unlock. Screens just power off after 10 min
-# idle (DPMS) and come back at activity. (To restore locking, re-add a
-# `timeout 300 'swaylock -f -c 000000'` and a `before-sleep 'swaylock …'` line.)
-exec swayidle -w \
-    timeout 600  'swaymsg "output * power off"' \
-    resume       'swaymsg "output * power on"'
+### Idle behaviour: NONE — screen lock AND DPMS screen-off both removed #####
+# No swayidle at all: the screen never blanks and never locks on idle. To bring
+# power-saving back, re-add (one line):
+#   exec swayidle -w timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"'
+# and a `timeout 300 'swaylock -f -c 000000'` clause if you also want locking.
 
 ### Autostart ###############################################################
 # exec waybar        # top status bar — DISABLED per user request (no top bar)
