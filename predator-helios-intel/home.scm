@@ -625,6 +625,21 @@ bg() {
         builtin bg \"$@\"
     fi
 }
+")
+                           ;; `lynis-audit` — full Lynis audit with the tuned profile
+                           ;; (/etc/lynis/custom.prf, created by config-sway.scm). Guards
+                           ;; against the profile not existing yet (pre-reconfigure).
+                           (plain-file "lynis-audit.bash"
+                                       "# lynis-audit: Lynis system audit with the securityops tuned profile.
+lynis-audit() {
+    local prof=/etc/lynis/custom.prf lyn=/run/current-system/profile/bin/lynis
+    if [ -f \"$prof\" ]; then
+        sudo \"$lyn\" audit system --profile \"$prof\" \"$@\"
+    else
+        echo \"lynis-audit: $prof not found yet — run 'sudo guix system reconfigure' first.\" >&2
+        sudo \"$lyn\" audit system \"$@\"
+    fi
+}
 ")))
              (bash-profile (list (local-file "/etc/.bash_profile" "bash_profile")))))
 
