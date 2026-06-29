@@ -67,12 +67,16 @@ directly, not Mesa/llvmpipe).
 
 | Metric | Value |
 |--------|-------|
-| Hardening index | **63** (non-root `--quick`, 205 tests) |
-| | a non-root scan skips kernel/boot checks; a full `sudo lynis audit system` scores higher |
+| Hardening index (default) | **66** (non-root `--quick`) |
+| Hardening index (tuned) | **73** via `lynis audit system --profile /etc/lynis/custom.prf` |
+| | The profile (declared in `config-sway.scm`) documents/skips tests that conflict with this laptop's role (gaming/dev/USB/Docker/VPN) or are heavy logging the user declined — standard Lynis per-host tuning, each skip with a reason. After a `guix system reconfigure` the live KSPP sysctls (`perf_event_paranoid=3`, `dev.tty.ldisc_autoload=0`, `log_martians`) + the `/etc/issue` legal banner also clear KRNL-6000 and BANN-7126 *for real* (~76). |
 
-Pairs with the kernel-level hardening already baked in (`lockdown`, KSPP
-`init_on_alloc`, `slab_nomerge`, `randomize_kstack_offset`, `page_table_check`,
-`yama ptrace_scope=2`, nftables, AppArmor/landlock LSM stack).
+Pairs with the kernel-level hardening baked in: KSPP `init_on_alloc`,
+`slab_nomerge`, `randomize_kstack_offset`, `mitigations=on`, ~20 KSPP/Lynis
+`sysctl`s, `yama ptrace_scope=1` (baked to 1 so RDR2/GTA run without a runtime
+toggle), nftables deny-by-default, AppArmor + landlock + yama LSM stack, AIDE
+file integrity, hardened OpenSSH. (Kernel `lockdown` is intentionally OFF so the
+unsigned NVIDIA module loads.)
 
 ---
 

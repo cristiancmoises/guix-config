@@ -394,6 +394,9 @@
 (define %securityops-os
  (operating-system
 
+  ;; ── Legal login banner (Lynis BANN-7126), shown at the greetd text login. ──
+  (issue "\nAuthorized access only. All activity on this system may be monitored\nand recorded. Disconnect immediately if you are not an authorized user.\n\n")
+
   ;; ── Kernel: nonguix `linux` (7.0.x). REQUIRED for the prebuilt NVIDIA
   ;; module to load — the custom `securityops` kernel mismatches it. ──
   (kernel securityops)
@@ -759,7 +762,10 @@
             ;;    desktop; no extra logs, nothing that breaks gaming/dev) ──
             ("kernel.kexec_load_disabled"                  . "1")  ; no runtime kernel swap
             ("kernel.sysrq"                                . "0")  ; disable magic SysRq
-            ("kernel.perf_event_paranoid"                  . "2")  ; restrict unpriv perf (sudo perf still works)
+            ("kernel.perf_event_paranoid"                  . "3")  ; KSPP/Lynis KRNL-6000: strictest (sudo perf still works)
+            ("dev.tty.ldisc_autoload"                      . "0")  ; Lynis KRNL-6000: no auto-load of TTY line disciplines
+            ("net.ipv4.conf.all.log_martians"              . "1")  ; Lynis: log spoofed / source-routed packets
+            ("net.ipv4.conf.default.log_martians"          . "1")
             ("kernel.randomize_va_space"                   . "2")  ; full ASLR
             ("kernel.core_uses_pid"                        . "1")
             ("fs.suid_dumpable"                            . "0")  ; no setuid core dumps
@@ -1105,6 +1111,48 @@ table inet filter {
 
      ;; Blueman D-Bus integration.
      (simple-service 'blueman dbus-root-service-type (list blueman))
+
+     ;; (Log rotation already runs via %base-services' log-rotation-service-type;
+     ;; Lynis can't detect Guix's Shepherd-based rotation — there's no
+     ;; /etc/logrotate.d — so LOGG-2146 is documented as a skip in the profile.)
+
+     ;; ── Hardening: legal banner (issue.net) + a documented Lynis profile. Lynis'
+     ;; own docs recommend per-host profiles. Each skipped test either CONFLICTS
+     ;; with this laptop's role (gaming/dev/USB/Docker/VPN), is already handled
+     ;; another way (cmdline module blacklist, LUKS2 full-disk encryption), or is
+     ;; heavy logging the user declined — suppressed WITH A REASON, not by breaking
+     ;; the system. The real hardening (sysctls, banner, log rotation, SSH, AIDE,
+     ;; AppArmor, mitigations) stays in force. ──
+     (simple-service 'lynis-hardening-etc etc-service-type
+       (list
+        (list "issue.net"
+              (plain-file "issue.net"
+                          "Authorized access only. Activity may be monitored and recorded.\n"))
+        (list "lynis/custom.prf"
+              (plain-file "lynis-custom.prf"
+                          (string-append
+                           "# securityops — documented Lynis exceptions (see config-sway.scm).\n"
+                           "# Guix ships lynis' default.prf read-only in the store, so this file is\n"
+                           "# NOT auto-loaded; apply it with:\n"
+                           "#   sudo lynis audit system --profile /etc/lynis/custom.prf\n"
+                           "skip-test=ACCT-9622\n"   ; process accounting (acct) — heavy logging, declined
+                           "skip-test=ACCT-9626\n"   ; sysstat — declined
+                           "skip-test=ACCT-9628\n"   ; auditd — declined
+                           "skip-test=HRDN-7222\n"   ; restrict compilers — gcc needed for development
+                           "skip-test=USB-1000\n"    ; usb-storage — USB drives are used
+                           "skip-test=FINT-4350\n"   ; AIDE file-integrity IS installed (the 'aide service)
+                           "skip-test=KRNL-6000:kernel.modules_disabled\n"        ; breaks NVIDIA/USB/BT hotplug
+                           "skip-test=KRNL-6000:net.ipv4.conf.all.forwarding\n"   ; Docker/libvirt/Mullvad need it
+                           "skip-test=NETW-3200\n"   ; dccp/sctp/rds/tipc blacklisted on the kernel cmdline
+                           "skip-test=STRG-1846\n"   ; firewire blacklisted on the kernel cmdline
+                           "skip-test=BOOT-5122\n"   ; LUKS2 full-disk encryption makes GRUB-param tampering useless
+                           "skip-test=PKGS-7398\n"   ; Guix is declarative/reproducible; no apt-style vuln audit
+                           "skip-test=AUTH-9230\n"   ; /etc/login.defs is Guix-managed (single-user laptop)
+                           "skip-test=AUTH-9286\n"   ; password aging — single-user laptop
+                           "skip-test=AUTH-9328\n"   ; umask — set per-user in home.scm instead
+                           "skip-test=NAME-4028\n"   ; resolv.conf managed dynamically by Mullvad
+                           "skip-test=NAME-4406\n"
+                           "skip-test=LOGG-2146\n")))))   ; rotation runs via Guix log-rotation-service-type (no /etc/logrotate.d)
 
      ;; Fcitx input-method environment.
      (simple-service 'jp-ime-env session-environment-service-type
