@@ -612,7 +612,20 @@
                 ("mpv" . "mpv --audio-pitch-correction=yes --vf=setpts=PTS/1")
                 ("record" . "ffmpeg -f x11grab -r 23 -s 1920x1080 -i $DISPLAY -f pulse -i nui_mic_remap -filter_complex '[1:a]volume=2.0[a]' -map 0:v -map '[a]' -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 23 -y /tmp/output.mp4")
                 ("isolate" . "guix shell --container --network --preserve='^DISPLAY$' --preserve='^XAUTHORITY$' --expose=$XAUTHORITY --expose=/etc/ssl/certs --no-cwd")))
-             (bashrc (list (local-file "/etc/.bashrc" "bashrc")))
+             (bashrc (list (local-file "/etc/.bashrc" "bashrc")
+                           ;; `bg <image>` wallpaper shortcut — a superset of the job-control
+                           ;; builtin (file arg -> set wallpaper via ~/.local/bin/setbg;
+                           ;; otherwise the real builtin). Matches the fish functions/bg.fish.
+                           (plain-file "bg-wallpaper.bash"
+                                       "# bg <image-file>: set the wallpaper; else the job-control builtin.
+bg() {
+    if [ -n \"${1:-}\" ] && [ -f \"$1\" ]; then
+        setbg \"$@\"
+    else
+        builtin bg \"$@\"
+    fi
+}
+")))
              (bash-profile (list (local-file "/etc/.bash_profile" "bash_profile")))))
 
    ;; ── Fish (primary shell) ──

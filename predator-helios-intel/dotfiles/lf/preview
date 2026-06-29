@@ -64,8 +64,11 @@ case "$(printf "%s\n" "$(readlink -f "$1")" | awk '{print tolower($0)}')" in
         image "$1" "$2" "$3" "$4" "$5"
         ;;
     *.gif)
-        if command -v mpv >/dev/null 2>&1; then
-            mpv --loop-file --no-audio --vo=tct --vf=scale="$4:$5" "$1" 2>/dev/null || image "$1" "$2" "$3" "$4" "$5"
+        # GIF -> static first-frame thumbnail (ueberzugpp shows only the first frame
+        # of an animated gif anyway; ffmpeg extracts it reliably and we cache it).
+        [ ! -f "${CACHE}.jpg" ] && ffmpeg -y -i "$1" -vframes 1 "${CACHE}.jpg" >/dev/null 2>&1
+        if [ -f "${CACHE}.jpg" ]; then
+            image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
         else
             image "$1" "$2" "$3" "$4" "$5"
         fi
@@ -78,9 +81,19 @@ case "$(printf "%s\n" "$(readlink -f "$1")" | awk '{print tolower($0)}')" in
         [ ! -f "${CACHE}.jpg" ] && pdftoppm -jpeg -f 1 -singlefile -scale-to 1024 "$1" "$CACHE" 2>/dev/null || echo "Failed to generate PDF thumbnail"
         image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
         ;;
-    *.mp4|*.mkv|*.webm|*.avi|*.mov)
-        [ ! -f "${CACHE}.jpg" ] && ffmpegthumbnailer -i "$1" -o "${CACHE}.jpg" -s 1024 -q 8 2>/dev/null || echo "Failed to generate video thumbnail"
-        image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
+    *.mp4|*.mkv|*.webm|*.avi|*.mov|*.flv|*.wmv|*.m4v|*.mpg|*.mpeg|*.ts|*.m2ts|*.ogv)
+        # VIDEO -> thumbnail. Prefer ffmpegthumbnailer; fall back to ffmpeg (seek 3s
+        # for a non-black frame, then frame 0 for very short clips).
+        if [ ! -f "${CACHE}.jpg" ]; then
+            ffmpegthumbnailer -i "$1" -o "${CACHE}.jpg" -s 1024 -q 8 >/dev/null 2>&1 \
+              || ffmpeg -y -ss 3 -i "$1" -vframes 1 -vf 'scale=1024:-1' "${CACHE}.jpg" >/dev/null 2>&1 \
+              || ffmpeg -y -i "$1" -vframes 1 -vf 'scale=1024:-1' "${CACHE}.jpg" >/dev/null 2>&1
+        fi
+        if [ -f "${CACHE}.jpg" ]; then
+            image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
+        else
+            echo "Failed to generate video thumbnail (ffmpegthumbnailer/ffmpeg)"
+        fi
         ;;
     *.cbz|*.cbr|*.cbt)
         [ ! -f "${CACHE}.jpg" ] && comicthumb "$1" "${CACHE}.jpg" 1024 2>/dev/null || echo "Failed to generate comic thumbnail"

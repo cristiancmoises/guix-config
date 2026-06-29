@@ -45,4 +45,18 @@ The terminal must speak the chosen protocol — **WezTerm/kitty/ghostty** do kit
 graphics, **foot** does sixel (both Wayland-native, correctly positioned). If a terminal
 supports neither, set `UB_OUTPUT=wayland` (ueberzugpp's own layer-shell overlay).
 
+## GIF + video thumbnails
+
+`preview` also renders **gif and video** thumbnails (cached in `~/.cache/lf/`, pruned
+after a day):
+
+- **GIF** → static **first frame** via `ffmpeg -vframes 1` (ueberzugpp shows only the
+  first frame of an animated gif anyway), shown through ueberzug. Replaces the old janky
+  `mpv --vo=tct` terminal-blocks path.
+- **Video** (`mp4/mkv/webm/avi/mov/flv/wmv/m4v/mpg/mpeg/ts/m2ts/ogv`) → thumbnail via
+  **`ffmpegthumbnailer`**, falling back to **`ffmpeg`** (seek 3 s for a non-black frame,
+  then frame 0 for very short clips). Robust if either tool is missing.
+
+(Also handled the same way: svg, pdf, cbz/cbr/cbt, epub.)
+
 > Apply lf changes: just relaunch `lf` (the wrapper re-reads these scripts each run).

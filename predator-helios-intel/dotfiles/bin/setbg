@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# setbg <image> — set the desktop wallpaper, applied live AND persisted.
+#   Sway/Wayland: `swaymsg output * bg` (live) + rewrite the `output * bg` line in
+#                 ~/.config/sway/config (persist across reload/reboot).
+#   X11:          `feh --bg-fill` (persists via ~/.fehbg, which xmonad re-applies).
+# Used by the `bg` shell shortcut (fish + bash).
+set -euo pipefail
+
+img="${1:-}"
+[ -n "$img" ] || { echo "usage: setbg <image-file>" >&2; exit 2; }
+[ -f "$img" ] || { echo "setbg: no such file: $img" >&2; exit 1; }
+img="$(realpath -- "$img")"
+
+# Find the Sway IPC socket even if SWAYSOCK isn't exported.
+: "${SWAYSOCK:=$(ls "/run/user/$(id -u)"/sway-ipc.*.sock 2>/dev/null | head -1)}"
+export SWAYSOCK
+
+if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null 2>&1 \
+   && swaymsg -t get_version >/dev/null 2>&1; then
+    # live
+    swaymsg output "*" bg "$img" fill >/dev/null
+    # persist: rewrite the single `output * bg ...` line in the Sway config
+    cfg="$HOME/.config/sway/config"
+    if [ -w "$cfg" ] && grep -qE '^[[:space:]]*output \* bg ' "$cfg"; then
+        python3 - "$cfg" "$img" <<'PY'
+import re, sys
+cfg, img = sys.argv[1], sys.argv[2]
+s = open(cfg).read()
+s = re.sub(r'(?m)^[ \t]*output \* bg .*$', f'output * bg "{img}" fill', s, count=1)
+open(cfg, 'w').write(s)
+PY
+        echo "wallpaper set + persisted (Sway): $img"
+    else
+        echo "wallpaper set (Sway; config not writable, not persisted): $img"
+    fi
+elif [ -n "${DISPLAY:-}" ] && command -v feh >/dev/null 2>&1; then
+    feh --bg-fill -- "$img"
+    echo "wallpaper set (X11/feh): $img"
+else
+    echo "setbg: no Sway (SWAYSOCK) or X11 (DISPLAY) session detected" >&2
+    exit 1
+fi

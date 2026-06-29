@@ -10,7 +10,8 @@ Per-user dotfiles for the two display-stack variants ([see the variant table](..
 | [`dual-monitor`](./dual-monitor) | XLibre | HDMI/DP hotplug helper |
 | [`rofi-brightness.sh`](./rofi-brightness.sh) | XLibre | rofi brightness applet |
 | [`gaming/`](./gaming/) | both | RDR2 / GTA V Proton tuning, Steam reconnect, vkBasalt |
-| [`lf/`](./lf/) | both (terminal) | `lf` file manager + **ueberzugpp image previews** (Sway/Wayland fix) |
+| [`lf/`](./lf/) | both (terminal) | `lf` file manager + **ueberzugpp image/gif/video previews** (Sway/Wayland fix) |
+| [`bin/setbg`](./bin/setbg) · [`fish/functions/bg.fish`](./fish/functions/bg.fish) | both | **`bg <image>` wallpaper shortcut** — Sway (live + persisted) / X11 feh; superset of the job-control builtin. Bash side is in `../home.scm`. |
 
 ---
 
