@@ -10,6 +10,7 @@ Per-user dotfiles for the two display-stack variants ([see the variant table](..
 | [`dual-monitor`](./dual-monitor) | XLibre | HDMI/DP hotplug helper |
 | [`rofi-brightness.sh`](./rofi-brightness.sh) | XLibre | rofi brightness applet |
 | [`gaming/`](./gaming/) | both | RDR2 / GTA V Proton tuning, Steam reconnect, vkBasalt |
+| [`lf/`](./lf/) | both (terminal) | `lf` file manager + **ueberzugpp image previews** (Sway/Wayland fix) |
 
 ---
 

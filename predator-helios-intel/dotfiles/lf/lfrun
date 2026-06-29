@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+cleanup() {
+    exec 3>&-
+    [ -p "$FIFO_UEBERZUG" ] && rm -f "$FIFO_UEBERZUG"
+}
+
+if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+    lf "$@"
+else
+    [ ! -d "$HOME/.cache/lf" ] && mkdir -p "$HOME/.cache/lf"
+    export FIFO_UEBERZUG="$HOME/.cache/lf/ueberzug-$$"
+    # Pick a Wayland-correct ueberzugpp output backend for THIS terminal. The old
+    # default was the X11 overlay, which mispositions / doesn't draw under Sway:
+    #   kitty graphics protocol -> WezTerm / kitty / ghostty
+    #   sixel                   -> foot
+    case "${TERM_PROGRAM:-}|${TERM:-}" in
+        *WezTerm*|*kitty*|*ghostty*) UB_OUTPUT=kitty ;;
+        *foot*)                      UB_OUTPUT=sixel ;;
+        *)                           UB_OUTPUT=kitty ;;
+    esac
+    mkfifo "$FIFO_UEBERZUG"
+    ueberzugpp layer -s -o "$UB_OUTPUT" <"$FIFO_UEBERZUG" &
+    exec 3>"$FIFO_UEBERZUG"
+    trap cleanup EXIT
+    lf "$@" 3>&-
+fi
