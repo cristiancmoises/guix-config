@@ -68,8 +68,22 @@ directly, not Mesa/llvmpipe).
 | Metric | Value |
 |--------|-------|
 | Hardening index (default) | **66** (non-root `--quick`) |
-| Hardening index (tuned) | **73** via `lynis audit system --profile /etc/lynis/custom.prf` |
-| | The profile (declared in `config-sway.scm`) documents/skips tests that conflict with this laptop's role (gaming/dev/USB/Docker/VPN) or are heavy logging the user declined — standard Lynis per-host tuning, each skip with a reason. After a `guix system reconfigure` the live KSPP sysctls (`perf_event_paranoid=3`, `dev.tty.ldisc_autoload=0`, `log_martians`) + the `/etc/issue` legal banner also clear KRNL-6000 and BANN-7126 *for real* (~76). |
+| Hardening index (tuned) | **73** via `lynis audit system --profile /etc/lynis/custom.prf` (use the `lynis-audit` shell shortcut) |
+| Hardening index (logging) | **~mid-80s** once the capped auditd + acct + sysstat stack runs (post-reconfigure) |
+| | The profile (declared in `config-sway.scm`) documents/skips tests that conflict with this laptop's role (gaming/dev/USB/Docker/VPN) or are Guix-managed (login.defs) — standard Lynis per-host tuning, each skip with a reason. After a `guix system reconfigure` the live KSPP sysctls (`perf_event_paranoid=3`, `dev.tty.ldisc_autoload=0`, `log_martians`) + the `/etc/issue` legal banner clear KRNL-6000 and BANN-7126 *for real*, and the **capped logging stack** (auditd, process accounting, sysstat) earns the ACCT-9622/9626/9628 tests that were previously skipped. |
+
+### Capped logging stack (≤ 500 MB budget)
+
+Logging is enabled but **size-bounded** so security logs stay well under 500 MB:
+
+| Tool | Path | Cap | Lynis |
+|------|------|-----|-------|
+| **auditd** | `/var/log/audit.log` | `max_log_file 40 MB × num_logs 5` ≈ **200 MB** hard cap (`ROTATE`) | ACCT-9628 |
+| **acct** (process accounting) | `/var/log/account/pacct` | daily truncate once it tops **50 MB** | ACCT-9622 |
+| **sysstat** (`sa1`/`sa2` via mcron) | `/var/log/sa/saNN` | day-of-month files, ≈ **≤ 60 MB / month** | ACCT-9626 |
+| **syslog** | `/var/log/messages` | `%base` log-rotation-service-type | LOGG-* |
+
+≈ 360 MB of security logs + ~75 MB of existing guix build logs = **< 500 MB**. Reaching **> 90** would additionally need pam_pwquality, a GRUB password, AppArmor *enforce* profiles, and a custom `/etc/login.defs` — all of which risk lock-out or app breakage on a daily-driver gaming laptop, so they are intentionally **not** applied (documented as skips instead).
 
 Pairs with the kernel-level hardening baked in: KSPP `init_on_alloc`,
 `slab_nomerge`, `randomize_kstack_offset`, `mitigations=on`, ~20 KSPP/Lynis

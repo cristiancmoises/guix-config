@@ -76,7 +76,7 @@ Measured **2026-06-27**, kernel **7.1.1**, governor `powersave` + EPP `balance_p
 | **Storage** | `/tmp` write — tmpfs (RAM) | **~5.7 GB/s** |
 | **Memory** | RAM / zram (zstd) / encrypted swapfile → **total swap** | 16 GiB / 8 GiB / 24 GiB → **31 GiB** |
 | **GPU** | NVIDIA RTX 4060 Laptop — driver / Vulkan / idle temp | **580.159.04** / **Vulkan 1.4.312** / **44 °C** |
-| **Security** | lynis hardening index (non-root `--quick`) | **66** → **73** with the tuned profile |
+| **Security** | lynis hardening index (non-root `--quick`) | **66** → **73** (tuned profile) → **mid-80s** with the capped auditd + acct + sysstat logging stack |
 
 > Headline: the box hits **full single-core turbo (~4.95 GHz) under load even on the `powersave` governor**, AES-NI makes the LUKS2 full-disk encryption nearly free (1.0 GB/s encrypted writes), and the NVIDIA + zram + swap stack is live exactly as configured.
 

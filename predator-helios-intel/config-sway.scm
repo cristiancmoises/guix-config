@@ -207,6 +207,7 @@
  (gnu services mcron)
  (gnu services shepherd)
  (gnu services herd)
+ (gnu services auditd)           ; auditd-service-type (capped audit logging)
  (gnu services admin)
  (gnu services pm)               ; thermald-service-type
  (small-guix services mullvad)
@@ -1112,17 +1113,97 @@ table inet filter {
      ;; Blueman D-Bus integration.
      (simple-service 'blueman dbus-root-service-type (list blueman))
 
+     ;; ── Capped logging stack (user-requested 2026-06-29) ───────────────────
+     ;; auditd + BSD process accounting (acct) + sysstat, EVERY one size-bounded
+     ;; so the security logs stay well under the 500 MB budget the user set:
+     ;;   • auditd  /var/log/audit.log    max_log_file 40 MB × num_logs 5 ≈ 200 MB hard cap (ROTATE)
+     ;;   • acct    /var/log/account/pacct truncated daily once it passes 50 MB
+     ;;   • sysstat /var/log/sa/saNN       sadc rotates by day-of-month ≈ ≤ 60 MB / month
+     ;;   • syslog  /var/log/messages      rotated by %base log-rotation-service-type
+     ;; Total ≈ 360 MB of security logs + ~75 MB of existing guix build logs < 500 MB.
+     ;; The skip-test=ACCT-962x lines are REMOVED from the profile below now that
+     ;; these tools actually RUN, so Lynis credits them (acct=9622, sysstat=9626,
+     ;; auditd=9628). The audit/acct/sysstat *packages* are already installed
+     ;; (see the packages list); this only adds the services that activate them.
+
+     ;; Writable log dirs/files these tools need (root-only, mode 0600).
+     (simple-service 'securityops-log-dirs activation-service-type
+       #~(begin
+           (use-modules (guix build utils))
+           (mkdir-p "/var/log/account")
+           (mkdir-p "/var/log/sa")
+           (let ((p "/var/log/account/pacct"))
+             (unless (file-exists? p)
+               (close-port (open-output-file p)))
+             (chmod p #o600))))
+
+     ;; auditd — file/exec auditing; log hard-capped at ~200 MB (40 MB × 5, ROTATE).
+     (service auditd-service-type
+       (auditd-configuration
+        (configuration-directory
+         (computed-file "auditd-config"
+           #~(begin
+               (mkdir #$output)
+               (copy-file
+                #$(plain-file "auditd.conf"
+                              "log_file = /var/log/audit.log\n\
+log_format = ENRICHED\n\
+freq = 1\n\
+max_log_file = 40\n\
+num_logs = 5\n\
+max_log_file_action = ROTATE\n\
+space_left = 5%\n\
+space_left_action = syslog\n\
+admin_space_left_action = ignore\n\
+disk_full_action = ignore\n\
+disk_error_action = syslog\n")
+                (string-append #$output "/auditd.conf")))))))
+
+     ;; BSD process accounting — turn accton ON at boot (one-shot).
+     (simple-service 'process-accounting shepherd-root-service-type
+       (list (shepherd-service
+              (documentation "Enable BSD process accounting to /var/log/account/pacct.")
+              (provision '(process-accounting))
+              (requirement '(file-systems))
+              (one-shot? #t)
+              (start #~(make-forkexec-constructor
+                        (list #$(file-append acct "/sbin/accton")
+                              "/var/log/account/pacct")))
+              (stop #~(const #f)))))
+
+     ;; sysstat — collect system-activity data every 10 min (sa1) + a daily
+     ;; summary (sa2). List actions = direct exec (no shell). Data lands in
+     ;; /var/log/sa and is naturally bounded to one month by day-of-month files.
+     (simple-service 'sysstat-collect mcron-service-type
+       (list
+        #~(job "*/10 * * * *"
+               (string-append #$(file-append sysstat "/lib/sa/sa1") " 1 1"))
+        #~(job "53 23 * * *"
+               (string-append #$(file-append sysstat "/lib/sa/sa2") " -A"))))
+
+     ;; Bound the acct file: once a day, if pacct tops 50 MB, flip accton off,
+     ;; truncate, and re-enable — keeps process accounting ≤ 50 MB.
+     (simple-service 'acct-rotate mcron-service-type
+       (list #~(job "30 3 * * *"
+                    (string-append
+                     "if [ -f /var/log/account/pacct ] && "
+                     "[ \"$(stat -c%s /var/log/account/pacct)\" -gt 52428800 ]; then "
+                     #$(file-append acct "/sbin/accton") " off; "
+                     ": > /var/log/account/pacct; "
+                     #$(file-append acct "/sbin/accton") " /var/log/account/pacct; fi"))))
+
      ;; (Log rotation already runs via %base-services' log-rotation-service-type;
      ;; Lynis can't detect Guix's Shepherd-based rotation — there's no
      ;; /etc/logrotate.d — so LOGG-2146 is documented as a skip in the profile.)
 
      ;; ── Hardening: legal banner (issue.net) + a documented Lynis profile. Lynis'
      ;; own docs recommend per-host profiles. Each skipped test either CONFLICTS
-     ;; with this laptop's role (gaming/dev/USB/Docker/VPN), is already handled
-     ;; another way (cmdline module blacklist, LUKS2 full-disk encryption), or is
-     ;; heavy logging the user declined — suppressed WITH A REASON, not by breaking
-     ;; the system. The real hardening (sysctls, banner, log rotation, SSH, AIDE,
-     ;; AppArmor, mitigations) stays in force. ──
+     ;; with this laptop's role (gaming/dev/USB/Docker/VPN) or is already handled
+     ;; another way (cmdline module blacklist, LUKS2 full-disk encryption,
+     ;; Guix-managed login.defs) — suppressed WITH A REASON, not by breaking the
+     ;; system. The real hardening (auditd + acct + sysstat logging, ~30 sysctls,
+     ;; banner, log rotation, SSH, AIDE, AppArmor, mitigations) stays in force.
+     ;; NOTE: the ACCT-962x skips are GONE — those tools now run (capped). ──
      (simple-service 'lynis-hardening-etc etc-service-type
        (list
         (list "issue.net"
@@ -1135,9 +1216,9 @@ table inet filter {
                            "# Guix ships lynis' default.prf read-only in the store, so this file is\n"
                            "# NOT auto-loaded; apply it with:\n"
                            "#   sudo lynis audit system --profile /etc/lynis/custom.prf\n"
-                           "skip-test=ACCT-9622\n"   ; process accounting (acct) — heavy logging, declined
-                           "skip-test=ACCT-9626\n"   ; sysstat — declined
-                           "skip-test=ACCT-9628\n"   ; auditd — declined
+                           "# (ACCT-9622/9626/9628 are NOT skipped: auditd, acct and sysstat now run.\n"
+                           "#  If sysstat ACCT-9626 still warns — Lynis can miss Guix mcron cron entries —\n"
+                           "#  re-add a single 'skip-test=ACCT-9626' line here.)\n"
                            "skip-test=HRDN-7222\n"   ; restrict compilers — gcc needed for development
                            "skip-test=USB-1000\n"    ; usb-storage — USB drives are used
                            "skip-test=FINT-4350\n"   ; AIDE file-integrity IS installed (the 'aide service)
